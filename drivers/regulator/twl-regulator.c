@@ -832,6 +832,15 @@ static struct regulator_ops twlsmps_ops = {
 
 /*----------------------------------------------------------------------*/
 
+static struct regulator_ops twl6030_resource_ops = {
+	.enable			= twl6030reg_enable,
+	.disable		= twl6030reg_disable,
+	.is_enabled		= twl6030reg_is_enabled,
+	.get_status		= twl6030reg_get_status,
+};
+
+/*----------------------------------------------------------------------*/
+
 #define TWL4030_FIXED_LDO(label, offset, mVolts, num, turnon_delay, \
 			remap_conf) \
 		TWL_FIXED_LDO(label, offset, mVolts, num, turnon_delay, \
@@ -881,6 +890,19 @@ static const struct twlreg_info TWL6030_INFO_##label = { \
 		.ops = &twl6030coresmps_ops, \
 		.type = REGULATOR_VOLTAGE, \
 		.owner = THIS_MODULE, \
+		}, \
+	}
+
+#define TWL6030_FIXED_RESOURCE(label, offset, turnon_delay) \
+static const struct twlreg_info TWL6030_INFO_##label = { \
+	.base = offset, \
+	.desc = { \
+		.name = #label, \
+		.id = TWL6030_REG_##label, \
+		.ops = &twl6030_resource_ops, \
+		.type = REGULATOR_VOLTAGE, \
+		.owner = THIS_MODULE, \
+		.enable_time = turnon_delay, \
 		}, \
 	}
 
@@ -1001,6 +1023,7 @@ TWL6030_FIXED_LDO(VDAC, 0x64, 1800, 0);
 TWL6030_FIXED_LDO(VUSB, 0x70, 3300, 0);
 TWL6030_FIXED_LDO(V1V8, 0x16, 1800, 0);
 TWL6030_FIXED_LDO(V2V1, 0x1c, 2100, 0);
+TWL6030_FIXED_RESOURCE(CLK32KAUDIO, 0x8F, 0);
 TWL6025_ADJUSTABLE_SMPS(SMPS3, 0x34);
 TWL6025_ADJUSTABLE_SMPS(SMPS4, 0x10);
 TWL6025_ADJUSTABLE_SMPS(VIO, 0x16);
