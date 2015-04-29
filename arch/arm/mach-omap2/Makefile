@@ -253,6 +253,16 @@ obj-$(CONFIG_MACH_IGEP0020)		+= board-igep0020.o
 obj-$(CONFIG_MACH_TOUCHBOOK)		+= board-omap3touchbook.o
 obj-$(CONFIG_MACH_OMAP_4430SDP)		+= board-4430sdp.o
 obj-$(CONFIG_MACH_OMAP4_PANDA)		+= board-omap4panda.o
+obj-$(CONFIG_MACH_TUNA)			+= board-tuna.o \
+					   board-tuna-display.o board-tuna-input.o \
+					   board-tuna-jack.o board-tuna-nfc.o \
+					   board-tuna-power.o board-tuna-sensors.o \
+					   board-tuna-vibrator.o board-tuna-wifi.o \
+					   board-tuna-bluetooth.o board-tuna-emif.o \
+					   board-tuna-connector.o board-tuna-pogo.o \
+					   board-tuna-usbhost.o
+obj-$(CONFIG_SEC_MODEM)			+= board-tuna-modems.o
+
 obj-$(CONFIG_MACH_MINNOW)		+= board-minnow.o
 
 obj-$(CONFIG_MACH_OMAP3517EVM)		+= board-am3517evm.o

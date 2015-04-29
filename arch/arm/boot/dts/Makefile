@@ -143,6 +143,7 @@ dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx28-sps1.dtb \
 	imx28-tx28.dtb
 dtb-$(CONFIG_ARCH_NOMADIK) += ste-nomadik-s8815.dtb
+ifneq ($(CONFIG_ARCH_OMAP2PLUS_NON_MULTIPLATFORM),y)
 dtb-$(CONFIG_ARCH_OMAP2PLUS) += omap2420-h4.dtb \
 	omap3430-sdp.dtb \
 	omap3-beagle.dtb \
@@ -161,6 +162,8 @@ dtb-$(CONFIG_ARCH_OMAP2PLUS) += omap2420-h4.dtb \
 	am335x-evm.dtb \
 	am335x-evmsk.dtb \
 	am335x-bone.dtb
+endif
+dtb-$(CONFIG_MACH_TUNA) += omap4-tuna.dtb
 dtb-$(CONFIG_MACH_MINNOW) += omap3-minnow-p0.dtb omap3-casper-p1.dtb
 dtb-$(CONFIG_ARCH_ORION5X) += orion5x-lacie-ethernet-disk-mini-v2.dtb
 dtb-$(CONFIG_ARCH_PRIMA2) += prima2-evb.dtb

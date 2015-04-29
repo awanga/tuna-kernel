@@ -23,3 +23,9 @@ config ION_TEGRA
 	help
 	  Choose this option if you wish to use ion on an nVidia Tegra.
 
+config ION_OMAP
+	tristate "Ion for OMAP"
+	depends on ARCH_OMAP && ION
+	help
+	  Choose this option if you wish to use ion on TI OMAP.
+

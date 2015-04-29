@@ -2,7 +2,7 @@ config ARCH_OMAP
 	bool
 
 config ARCH_OMAP2PLUS
-	bool "TI OMAP2/3/4/5 SoCs with device tree support" if (ARCH_MULTI_V6 || ARCH_MULTI_V7)
+	bool "TI OMAP2/3/4/5 SoCs with device tree support" if (ARCH_MULTI_V6 || ARCH_MULTI_V7 || !ARCH_MULTIPLATFORM)
 	select ARCH_HAS_CPUFREQ
 	select ARCH_HAS_HOLES_MEMORYMODEL
 	select ARCH_OMAP
@@ -54,7 +54,7 @@ config SOC_HAS_REALTIME_COUNTER
 config ARCH_OMAP2
 	bool "TI OMAP2"
 	depends on ARCH_OMAP2PLUS
-	depends on ARCH_MULTI_V6
+	depends on ARCH_MULTI_V6 || !ARCH_MULTIPLATFORM
 	default y
 	select CPU_V6
 	select MULTI_IRQ_HANDLER
@@ -64,7 +64,7 @@ config ARCH_OMAP2
 config ARCH_OMAP3
 	bool "TI OMAP3"
 	depends on ARCH_OMAP2PLUS
-	depends on ARCH_MULTI_V7
+	depends on ARCH_MULTI_V7 || !ARCH_MULTIPLATFORM
 	default y
 	select ARCH_HAS_OPP
 	select ARM_CPU_SUSPEND if PM
@@ -81,7 +81,7 @@ config ARCH_OMAP4
 	bool "TI OMAP4"
 	default y
 	depends on ARCH_OMAP2PLUS
-	depends on ARCH_MULTI_V7
+	depends on ARCH_MULTI_V7 || !ARCH_MULTIPLATFORM
 	select ARCH_HAS_OPP
 	select ARCH_NEEDS_CPU_IDLE_COUPLED if SMP
 	select ARM_CPU_SUSPEND if PM
@@ -105,7 +105,7 @@ config ARCH_OMAP4
 
 config SOC_OMAP5
 	bool "TI OMAP5"
-	depends on ARCH_MULTI_V7
+	depends on ARCH_MULTI_V7 || !ARCH_MULTIPLATFORM
 	select ARM_CPU_SUSPEND if PM
 	select ARM_GIC
 	select CPU_V7
@@ -394,6 +394,14 @@ config MACH_OMAP_4430SDP
 
 config MACH_OMAP4_PANDA
 	bool "OMAP4 Panda Board"
+	default y
+	depends on ARCH_OMAP4
+	select OMAP_PACKAGE_CBL
+	select OMAP_PACKAGE_CBS
+	select REGULATOR_FIXED_VOLTAGE if REGULATOR
+
+config MACH_TUNA
+	bool "Tuna Board"
 	default y
 	depends on ARCH_OMAP4
 	select OMAP_PACKAGE_CBL

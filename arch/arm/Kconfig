@@ -872,6 +872,13 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
+config ARCH_OMAP2PLUS_NON_MULTIPLATFORM
+	bool "TI OMAP2+"
+	depends on MMU
+	select ARCH_OMAP2PLUS
+	help
+	  Support for TI OMAP2 (non-multiplatform)
+
 endchoice
 
 menu "Multiple platform selection"
