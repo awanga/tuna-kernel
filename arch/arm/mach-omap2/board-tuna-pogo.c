@@ -27,7 +27,7 @@
 #include <linux/sched.h>
 #include <linux/completion.h>
 #include <linux/usb/otg.h>
-#include <linux/usb/otg_id.h>
+#include <linux/usb/phy.h>
 
 #include <asm/div64.h>
 

@@ -22,8 +22,9 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/wakelock.h>
-#include <plat/serial.h>
+#include <linux/stat.h>
 
+#include <mach/serial.h>
 #include "mux.h"
 
 #define GPIO_NFC_EN	173
@@ -34,7 +35,7 @@
 #define PWR_ON		1
 #define PWR_ON_FW	2
 
-#define NFC_UART_NUM	4  /* omap_uart_wake() counts from 1 */
+#define NFC_UART_NUM	3
 
 static unsigned int nfc_power;
 static struct wake_lock nfc_wake_lock;
@@ -93,7 +94,7 @@ static DEVICE_ATTR(nfc_power, S_IWUSR | S_IRUGO, nfc_power_show,
 
 static irqreturn_t nfc_irq_isr(int irq, void *dev)
 {
-	omap_uart_wake(NFC_UART_NUM);
+	omap_serial_wake(NFC_UART_NUM);
 
 	/*
 	 * take a 500ms wakelock, to give time for higher layers

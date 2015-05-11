@@ -170,6 +170,10 @@ choice
 config OMAP_PM_NOOP
 	bool "No-op/debug PM layer"
 
+config OMAP_PM
+	bool "OMAP PM layer implementation"
+	depends on PM
+
 endchoice
 
 endmenu

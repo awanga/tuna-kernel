@@ -21,9 +21,9 @@
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/platform_data/mms_ts.h>
 #include <asm/mach-types.h>
-#include <plat/omap4-keypad.h>
 
 #include "board-tuna.h"
+#include "omap4-keypad.h"
 #include "mux.h"
 
 #define GPIO_TOUCH_EN		19
@@ -150,7 +150,7 @@ static struct i2c_board_info __initdata tuna_i2c3_boardinfo_final[] = {
 		I2C_BOARD_INFO("mms_ts", 0x48),
 		.flags = I2C_CLIENT_WAKE,
 		.platform_data = &mms_ts_pdata,
-		.irq = OMAP_GPIO_IRQ(GPIO_TOUCH_IRQ),
+		//.irq = OMAP_GPIO_IRQ(GPIO_TOUCH_IRQ),
 	},
 };
 

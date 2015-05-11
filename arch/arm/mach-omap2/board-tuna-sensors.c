@@ -15,9 +15,9 @@
 #include <linux/kernel.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
-#include <linux/mpu.h>
-#include <linux/gp2a.h>
-#include <linux/i2c/twl6030-madc.h>
+#include <linux/platform_data/invensense_mpu6050.h>
+#include <linux/platform_data/gp2a.h>
+#include <linux/i2c/twl4030-madc.h>
 
 #include "mux.h"
 #include "board-tuna.h"
@@ -33,7 +33,7 @@
 
 static int gp2a_light_adc_value(void)
 {
-	return twl6030_get_madc_conversion(GP2A_LIGHT_ADC_CHANNEL);
+	return twl4030_get_madc_conversion(GP2A_LIGHT_ADC_CHANNEL);
 }
 
 static void gp2a_power(bool on)
@@ -97,11 +97,12 @@ static void rotcpy(s8 dst[3 * 3], const s8 src[3 * 3])
 	memcpy(dst, src, 3 * 3);
 }
 
-static struct mpu_platform_data mpu_data = {
-	.int_config  = 0x10,
+static struct inv_mpu6050_platform_data mpu_data = {
+/*	.int_config  = 0x10,*/
 	.orientation = {  1,  0,  0,
 			  0,  1,  0,
 			  0,  0,  1 },
+#if 0
 	/* accel */
 	.accel = {
 		.irq = OMAP_GPIO_IRQ(GPIO_ACC_INT),
@@ -122,6 +123,7 @@ static struct mpu_platform_data mpu_data = {
 				  0,  1,  0,
 				  0,  0,  1 },
 	},
+#endif
 };
 
 static struct gp2a_platform_data gp2a_pdata = {
@@ -133,18 +135,18 @@ static struct gp2a_platform_data gp2a_pdata = {
 static struct i2c_board_info __initdata tuna_sensors_i2c4_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("mpu3050", 0x68),
-		.irq = OMAP_GPIO_IRQ(GPIO_GYRO_INT),
+		//.irq = OMAP_GPIO_IRQ(GPIO_GYRO_INT),
 		.platform_data = &mpu_data,
 	},
 	{
 		I2C_BOARD_INFO("bma250", 0x18),
-		.irq = OMAP_GPIO_IRQ(GPIO_ACC_INT),
-		.platform_data = &mpu_data.accel,
+		//.irq = OMAP_GPIO_IRQ(GPIO_ACC_INT),
+		//.platform_data = &mpu_data.accel,
 	},
 	{
 		I2C_BOARD_INFO("yas530", 0x2e),
-		.irq = OMAP_GPIO_IRQ(GPIO_MAG_INT),
-		.platform_data = &mpu_data.compass,
+		//.irq = OMAP_GPIO_IRQ(GPIO_MAG_INT),
+		//.platform_data = &mpu_data.compass,
 	},
 	{
 		I2C_BOARD_INFO("gp2a", 0x44),
@@ -159,12 +161,12 @@ static void omap4_tuna_fixup_orientations_maguro(int revision)
 {
 	if (revision >= 3) {
 		rotcpy(mpu_data.orientation, orientation_back_right_90);
-		rotcpy(mpu_data.accel.orientation, orientation_back_left_90);
+		//rotcpy(mpu_data.accel.orientation, orientation_back_left_90);
 	} else if (revision >= 2) {
 		rotcpy(mpu_data.orientation, orientation_back_right_90);
-		rotcpy(mpu_data.accel.orientation, orientation_back_180);
+		//rotcpy(mpu_data.accel.orientation, orientation_back_180);
 	} else if (revision == 1) {
-		rotcpy(mpu_data.accel.orientation, orientation_back_left_90);
+		//rotcpy(mpu_data.accel.orientation, orientation_back_left_90);
 	}
 }
 
@@ -172,12 +174,12 @@ static void omap4_tuna_fixup_orientations_toro(int revision)
 {
 	if (revision >= 2) {
 		rotcpy(mpu_data.orientation, orientation_back_left_90);
-		rotcpy(mpu_data.accel.orientation, orientation_back);
-		rotcpy(mpu_data.compass.orientation, orientation_back_180);
+		//rotcpy(mpu_data.accel.orientation, orientation_back);
+		//rotcpy(mpu_data.compass.orientation, orientation_back_180);
 	} else if (revision >= 1) {
 		rotcpy(mpu_data.orientation, orientation_back_left_90);
-		rotcpy(mpu_data.accel.orientation, orientation_back_180);
-		rotcpy(mpu_data.compass.orientation, orientation_back_left_90);
+		//rotcpy(mpu_data.accel.orientation, orientation_back_180);
+		//rotcpy(mpu_data.compass.orientation, orientation_back_left_90);
 	}
 }
 
@@ -204,7 +206,7 @@ void __init omap4_tuna_sensors_init(void)
 		omap4_tuna_fixup_orientations_maguro(omap4_tuna_get_revision());
 	} else if (omap4_tuna_get_type() == TUNA_TYPE_TORO) {
 		omap4_tuna_fixup_orientations_toro(omap4_tuna_get_revision());
-		mpu_data.compass.private_data = compass_correction_matrix_toro;
+		//mpu_data.compass.private_data = compass_correction_matrix_toro;
 	}
 
 	i2c_register_board_info(4, tuna_sensors_i2c4_boardinfo,

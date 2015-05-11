@@ -29,14 +29,14 @@
 #include <linux/regulator/consumer.h>
 #include <linux/usb/otg.h>
 #include <linux/delay.h>
-#include <linux/sii9234.h>
 #include <linux/i2c/twl.h>
 #include <linux/mutex.h>
 #include <linux/switch.h>
 #include <linux/wakelock.h>
 
-#include <plat/usb.h>
+#include <media/sii9234.h>
 
+#include "usb.h"
 #include "mux.h"
 #include "board-tuna.h"
 
@@ -99,6 +99,7 @@
 #define TWL_REG_CONTROLLER_STAT1	0x03
 #define TWL_STAT1_VBUS_DET		BIT(2)
 
+/*
 struct tuna_otg {
 	struct otg_transceiver		otg;
 	struct device			dev;
@@ -114,8 +115,8 @@ struct tuna_otg {
 	int				current_device;
 
 	struct switch_dev		dock_switch;
-};
-static struct tuna_otg tuna_otg_xceiv;
+};*/
+static struct usb_otg tuna_otg_xceiv;
 
 enum {
 	TUNA_USB_MUX_FSA = 0,

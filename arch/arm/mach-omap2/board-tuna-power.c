@@ -22,13 +22,15 @@
 #include <linux/moduleparam.h>
 #include <linux/pda_power.h>
 #include <linux/platform_device.h>
-#include <linux/i2c/twl6030-madc.h>
+#include <linux/i2c/twl4030-madc.h>
 #include <linux/delay.h>
+#include <linux/stat.h>
 
 #include <plat/cpu.h>
-#include <plat/omap-pm.h>
 
 #include "board-tuna.h"
+#include "omap-pm.h"
+#include "soc.h"
 #include "mux.h"
 #include "pm.h"
 
@@ -263,11 +265,11 @@ static int twl6030_get_adc_data(int ch)
 	int i, j;
 
 	for (i = 0; i < ADC_NUM_SAMPLES; i++) {
-		adc_data = twl6030_get_madc_conversion(ch);
+		adc_data = twl4030_get_madc_conversion(ch);
 		if (adc_data == -EAGAIN) {
 			for (j = 0; j < ADC_LIMIT_ERR_COUNT; j++) {
 				msleep(20);
-				adc_data = twl6030_get_madc_conversion(ch);
+				adc_data = twl4030_get_madc_conversion(ch);
 				if (adc_data > 0)
 					break;
 			}
@@ -417,6 +419,7 @@ static const __initdata struct pda_power_pdata charger_pdata = {
 static struct max17040_platform_data max17043_pdata = {
 	.charger_online = charger_is_online,
 	.charger_enable = charger_is_charging,
+#if 0
 	.allow_charging = charger_set_only_charge,
 	.skip_reset = true,
 	.min_capacity = 3,
@@ -430,13 +433,14 @@ static struct max17040_platform_data max17043_pdata = {
 	.recharge_vol = 4140000,
 	.limit_charging_time = 21600,  /* 6 hours */
 	.limit_recharging_time = 5400, /* 90 min */
+#endif
 };
 
 static const __initdata struct i2c_board_info max17043_i2c[] = {
 	{
 		I2C_BOARD_INFO("max17040", (0x6C >> 1)),
 		.platform_data = &max17043_pdata,
-		.irq = OMAP_GPIO_IRQ(GPIO_FUEL_ALERT),
+		//.irq = OMAP_GPIO_IRQ(GPIO_FUEL_ALERT),
 	}
 };
 
@@ -461,10 +465,12 @@ void __init omap4_tuna_power_init(void)
 	int status;
 
 	/* Vsel0 = gpio, vsel1 = gnd */
-	status = omap_tps6236x_board_setup(true, TPS62361_GPIO, -1,
+	/*status = omap_tps6236x_board_setup(true, TPS62361_GPIO, -1,
 				OMAP_PIN_OFF_OUTPUT_HIGH, -1);
 	if (status)
-		pr_err("TPS62361 initialization failed: %d\n", status);
+		pr_err("TPS62361 initialization failed: %d\n", status);*/
+
+#if 0
 	/*
 	 * Some Tuna devices have a 4430 chip on a 4460 board, manually
 	 * tweak the power tree to the 4460 style with the TPS regulator.
@@ -477,16 +483,17 @@ void __init omap4_tuna_power_init(void)
 		omap_twl_pmic_update("core", CHIP_IS_OMAP446X, CHIP_IS_OMAP443X);
 		omap_tps6236x_update("mpu", CHIP_IS_OMAP446X, CHIP_IS_OMAP443X);
 	}
+#endif
 
 	/* Update temperature data from board type */
 	if (omap4_tuna_get_type() == TUNA_TYPE_TORO) {
 		temper_table = temper_table_toro;
 		temper_table_size = ARRAY_SIZE(temper_table_toro);
 
-		max17043_pdata.high_block_temp = HIGH_BLOCK_TEMP_TORO;
+		/*max17043_pdata.high_block_temp = HIGH_BLOCK_TEMP_TORO;
 		max17043_pdata.high_recover_temp = HIGH_RECOVER_TEMP_TORO;
 		max17043_pdata.low_block_temp = LOW_BLOCK_TEMP_TORO;
-		max17043_pdata.low_recover_temp = LOW_RECOVER_TEMP_TORO;
+		max17043_pdata.low_recover_temp = LOW_RECOVER_TEMP_TORO;*/
 	}
 
 	/* Update oscillator information */
@@ -499,7 +506,7 @@ void __init omap4_tuna_power_init(void)
 		 * tstart = 10ms + 5ms = 15ms.
 		 * tshut = 1us (rounded)
 		 */
-		omap_pm_set_osc_lp_time(15000, 1);
+		omap_pm_setup_oscillator(15000, 1);
 	} else {
 		/*
 		 * sample 5 onwards (Toro and Maguro), we use SQ200384:
@@ -509,7 +516,7 @@ void __init omap4_tuna_power_init(void)
 		 * tstart = 10ms + 10ms = 20ms.
 		 * tshut = 1us (rounded)
 		 */
-		omap_pm_set_osc_lp_time(20000, 1);
+		omap_pm_setup_oscillator(20000, 1);
 	}
 
 	omap_mux_init_gpio(charger_gpios[0].gpio, OMAP_PIN_INPUT);
@@ -523,7 +530,7 @@ void __init omap4_tuna_power_init(void)
 	if (IS_ERR_OR_NULL(pdev))
 		pr_err("cannot register pda-power\n");
 
-	max17043_pdata.use_fuel_alert = !is_charging_mode;
+	//max17043_pdata.use_fuel_alert = !is_charging_mode;
 	i2c_register_board_info(4, max17043_i2c, ARRAY_SIZE(max17043_i2c));
 
 	if (enable_sr)

@@ -234,6 +234,17 @@ static void _omap_serial_wakeup_event(struct uart_omap_port *up)
 		pm_wakeup_event(up->dev, up->wakelock_timeout);
 }
 
+int omap_serial_wake(int port_index)
+{
+        struct uart_omap_port *up;
+
+        if (port_index >= OMAP_MAX_HSUART_PORTS)
+                return -ENODEV;
+        up = ui[port_index];
+        _omap_serial_wakeup_event(up);
+	return 0;
+}
+
 static void _omap_serial_relax(struct uart_omap_port *up)
 {
 	if (up->wakelock_timeout)
@@ -248,6 +259,32 @@ void omap_serial_relax(int port_index)
 		return;
 	up = ui[port_index];
 	_omap_serial_relax(up);
+}
+
+int omap_serial_enable(int port_index)
+{
+	if (port_index >= OMAP_MAX_HSUART_PORTS)
+		return -ENODEV;
+
+	if (!ui[port_index])
+		return -ENODEV;
+
+	pm_runtime_get_sync(ui[port_index]->dev);
+
+	return 0;
+}
+
+int omap_serial_disable(int port_index)
+{
+	if (port_index >= OMAP_MAX_HSUART_PORTS)
+		return -ENODEV;
+
+	if (!ui[port_index])
+		return -ENODEV;
+
+	pm_runtime_put_sync_suspend(ui[port_index]->dev);
+
+	return 0;
 }
 
 static inline unsigned int serial_in(struct uart_omap_port *up, int offset)

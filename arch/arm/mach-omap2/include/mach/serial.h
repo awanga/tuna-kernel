@@ -8,6 +8,10 @@
  * GNU General Public License for more details.
  */
 
+#include <asm/memory.h>
+
+#define OMAP_UART_INFO		(PHYS_OFFSET + 0x3ffc)
+
 /* OMAP2 serial ports */
 #define OMAP2_UART1_BASE	0x4806a000
 #define OMAP2_UART2_BASE	0x4806c000
@@ -54,6 +58,26 @@
 
 #define OMAP24XX_BASE_BAUD	(48000000/16)
 
+/*
+ * DEBUG_LL port encoding stored into the UART1 scratchpad register by
+ * decomp_setup in uncompress.h
+ */
+#define OMAP2UART1		21
+#define OMAP2UART2		22
+#define OMAP2UART3		23
+#define OMAP3UART1		OMAP2UART1
+#define OMAP3UART2		OMAP2UART2
+#define OMAP3UART3		33
+#define OMAP3UART4		34		/* Only on 36xx */
+#define OMAP4UART1		OMAP2UART1
+#define OMAP4UART2		OMAP2UART2
+#define OMAP4UART3		43
+#define OMAP4UART4		44
+#define TI816XUART1		81
+#define TI816XUART2		82
+#define TI816XUART3		83
+#define ZOOM_UART		95		/* Only on zoom2/3 */
+
 #ifndef __ASSEMBLER__
 
 struct omap_board_data;
@@ -63,4 +87,7 @@ extern void omap_serial_init(void);
 extern void omap_serial_board_init(struct omap_uart_port_info *platform_data);
 extern void omap_serial_init_port(struct omap_board_data *bdata,
 		struct omap_uart_port_info *platform_data);
+extern int omap_serial_wake(int port_num);
+extern int omap_serial_enable(int port_num);
+extern int omap_serial_disable(int port_num);
 #endif

@@ -877,7 +877,7 @@ config ARCH_OMAP2PLUS_NON_MULTIPLATFORM
 	depends on MMU
 	select ARCH_OMAP2PLUS
 	help
-	  Support for TI OMAP2 (non-multiplatform)
+	  Support for TI OMAP2 (legacy non-multiplatform)
 
 endchoice
 

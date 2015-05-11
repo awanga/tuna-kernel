@@ -17,7 +17,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 
-#include <plat/usb.h>
+#include "usb.h"
 
 #include "board-tuna.h"
 #include "mux.h"

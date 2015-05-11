@@ -20,10 +20,10 @@
 
 #include <linux/platform_data/panel-s6e8aa0.h>
 
-#include <plat/vram.h>
+#include <mach/vram.h>
 
 #include <video/omapdss.h>
-#include <video/omap-panel-generic-dpi.h>
+#include <video/omap-panel-data.h>
 
 #include "board-tuna.h"
 #include "control.h"
@@ -954,7 +954,7 @@ static struct omap_dss_device tuna_oled_device = {
 	.driver_name		= "s6e8aa0",
 	.type			= OMAP_DISPLAY_TYPE_DSI,
 	.phy.dsi		= {
-		.type		= OMAP_DSS_DSI_TYPE_VIDEO_MODE,
+		/*.type		= OMAP_DSS_DSI_TYPE_VIDEO_MODE,
 		.clk_lane	= 1,
 		.clk_pol	= 0,
 		.data1_lane	= 2,
@@ -964,12 +964,13 @@ static struct omap_dss_device tuna_oled_device = {
 		.data3_lane	= 4,
 		.data3_pol	= 0,
 		.data4_lane	= 5,
-		.data4_pol	= 0,
+		.data4_pol	= 0,*/
 	},
 	.panel = {
-		.width_in_um	= 58000,
-		.height_in_um	= 102000,
+		/*.width_in_um	= 58000,
+		.height_in_um	= 102000,*/
 	},
+#if 0
 	.clocks = {
 		.dispc		= {
 			.channel = {
@@ -994,13 +995,13 @@ static struct omap_dss_device tuna_oled_device = {
 			.dsi_fclk_src   = OMAP_DSS_CLK_SRC_DSI_PLL_HSDIV_DSI,
 		},
 	},
-
+#endif
 	.channel		= OMAP_DSS_CHANNEL_LCD,
-#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
+/*#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
 	.skip_init              = true,
 #else
 	.skip_init              = false,
-#endif
+#endif*/
 };
 
 static void tuna_hdmi_mux_init(void)
@@ -1030,7 +1031,7 @@ static struct omap_dss_device tuna_hdmi_device = {
 	.name = "hdmi",
 	.driver_name = "hdmi_panel",
 	.type = OMAP_DISPLAY_TYPE_HDMI,
-	.clocks	= {
+	/*.clocks	= {
 		.dispc	= {
 			.dispc_fclk_src	= OMAP_DSS_CLK_SRC_FCK,
 		},
@@ -1040,7 +1041,7 @@ static struct omap_dss_device tuna_hdmi_device = {
 			.max_pixclk_khz = 75000,
 		},
 	},
-	.hpd_gpio = TUNA_GPIO_HDMI_HPD,
+	.hpd_gpio = TUNA_GPIO_HDMI_HPD,*/
 	.channel = OMAP_DSS_CHANNEL_DIGIT,
 };
 
@@ -1053,17 +1054,6 @@ static struct omap_dss_board_info tuna_dss_data = {
 	.num_devices	= ARRAY_SIZE(tuna_dss_devices),
 	.devices	= tuna_dss_devices,
 	.default_device	= &tuna_oled_device,
-};
-
-static struct omapfb_platform_data tuna_fb_pdata = {
-	.mem_desc = {
-		.region_cnt = 1,
-		.region = {
-			[0] = {
-				.size = TUNA_FB_RAM_SIZE,
-			},
-		},
-	},
 };
 
 void __init omap4_tuna_display_init(void)
@@ -1105,7 +1095,6 @@ void __init omap4_tuna_display_init(void)
 	pr_info("Using %ps\n", panel->factory_info);
 
 	omap_vram_set_sdram_vram(TUNA_FB_RAM_SIZE, 0);
-	omapfb_set_platform_data(&tuna_fb_pdata);
 	tuna_hdmi_mux_init();
 	omap_display_init(&tuna_dss_data);
 }

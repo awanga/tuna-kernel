@@ -78,6 +78,7 @@ endif
 
 # Power Management
 obj-$(CONFIG_OMAP_PM_NOOP)		+= omap-pm-noop.o
+obj-$(CONFIG_OMAP_PM)			+= omap-pm-interface.o omap-pm-helper.o
 
 ifeq ($(CONFIG_PM),y)
 obj-$(CONFIG_ARCH_OMAP2)		+= pm24xx.o
@@ -258,9 +259,8 @@ obj-$(CONFIG_MACH_TUNA)			+= board-tuna.o \
 					   board-tuna-jack.o board-tuna-nfc.o \
 					   board-tuna-power.o board-tuna-sensors.o \
 					   board-tuna-vibrator.o board-tuna-wifi.o \
-					   board-tuna-bluetooth.o board-tuna-emif.o \
-					   board-tuna-connector.o board-tuna-pogo.o \
-					   board-tuna-usbhost.o
+					   board-tuna-bluetooth.o
+#					   board-tuna-connector.o board-tuna-pogo.o board-tuna-usbhost.o
 obj-$(CONFIG_SEC_MODEM)			+= board-tuna-modems.o
 
 obj-$(CONFIG_MACH_MINNOW)		+= board-minnow.o

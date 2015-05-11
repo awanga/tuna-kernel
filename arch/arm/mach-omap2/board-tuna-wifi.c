@@ -26,11 +26,11 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
-#include <plat/mmc.h>
 
 #include <linux/random.h>
 #include <linux/jiffies.h>
 
+#include "mmc.h"
 #include "hsmmc.h"
 #include "control.h"
 #include "mux.h"
@@ -104,8 +104,8 @@ int __init tuna_init_wifi_mem(void)
 static struct resource tuna_wifi_resources[] = {
 	[0] = {
 		.name		= "bcmdhd_wlan_irq",
-		.start		= OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
-		.end		= OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
+		//.start		= OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
+		//.end		= OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
 	},
 };
@@ -147,13 +147,13 @@ static unsigned int tuna_wifi_status(struct device *dev)
 	return tuna_wifi_cd;
 }
 
-struct mmc_platform_data tuna_wifi_data = {
+/*struct mmc_platform_data tuna_wifi_data = {
 	.ocr_mask		= MMC_VDD_165_195 | MMC_VDD_20_21,
 	.built_in		= 1,
 	.status			= tuna_wifi_status,
 	.card_present		= 0,
 	.register_status_notify	= tuna_wifi_status_register,
-};
+};*/
 
 static int tuna_wifi_set_carddetect(int val)
 {
@@ -296,8 +296,8 @@ static int tuna_wifi_get_mac_addr(unsigned char *buf)
 		return -EFAULT;
 
 	if ((tuna_mac_addr[4] == 0) && (tuna_mac_addr[5] == 0)) {
-		srandom32((uint)jiffies);
-		rand_mac = random32();
+		prandom_seed((uint)jiffies);
+		rand_mac = prandom_u32();
 		tuna_mac_addr[3] = (unsigned char)rand_mac;
 		tuna_mac_addr[4] = (unsigned char)(rand_mac >> 8);
 		tuna_mac_addr[5] = (unsigned char)(rand_mac >> 16);
@@ -418,7 +418,7 @@ static void __init tuna_wlan_gpio(void)
 	/* WLAN PMENA - GPIO 104 */
 	omap_mux_init_signal("gpmc_ncs7.gpio_104", OMAP_PIN_OUTPUT);
 	/* Enable power to gpio_wk0-gpio_wk2 */
-	omap4_ctrl_wk_pad_writel(0xb0000000,
+	omap4_ctrl_pad_writel(0xb0000000,
 		OMAP4_CTRL_MODULE_PAD_WKUP_CONTROL_USIMIO);
 
 	/* gpio_enable(GPIO_WLAN_IRQ); */
