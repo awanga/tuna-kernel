@@ -22,6 +22,7 @@
 #include <linux/gpio.h>
 #include <linux/usb/otg.h>
 #include <linux/i2c/twl.h>
+#include <linux/i2c-gpio.h>
 #include <linux/mfd/twl6040.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
@@ -38,7 +39,11 @@
 #include <linux/usb/nop-usb-xceiv.h>
 #include <linux/wl12xx.h>
 #include <linux/irqchip/arm-gic.h>
+
+#include <linux/platform_data/serial-omap.h>
+#include <linux/platform_data/spi-omap2-mcspi.h>
 #include <linux/platform_data/omap-abe-twl6040.h>
+#include <linux/platform_data/lte_modem_bootloader.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -48,6 +53,7 @@
 
 #include "omap4-sar-layout.h"
 #include "common.h"
+#include "id.h"
 #include "soc.h"
 #include "mmc.h"
 #include "hsmmc.h"
@@ -85,6 +91,7 @@
 #define GPIO_GPS_PWR_EN	137
 #define GPIO_GPS_UART_SEL	164
 
+/* MHL I2C GPIO */
 #define GPIO_MHL_SCL_18V	99
 #define GPIO_MHL_SDA_18V	98
 
@@ -92,8 +99,6 @@
 #define REBOOT_FLAG_FASTBOOT	0x54534146
 #define REBOOT_FLAG_NORMAL	0x4D524F4E
 #define REBOOT_FLAG_POWER_OFF	0x46464F50
-
-#define UART_NUM_FOR_GPS	0
 
 
 /*
@@ -170,6 +175,11 @@ static const char *omap4_tuna_hw_rev_name(void) {
 /*
  * BT/Wifi/GPS
  */
+
+static struct platform_device bcm4330_bluetooth_device = {
+	.name = "bcm4330_bluetooth",
+	.id = -1,
+};
 
 /* wl127x BT, FM, GPS connectivity chip */
 static struct ti_st_plat_data wilink_platform_data = {
@@ -248,8 +258,6 @@ static struct omap_musb_board_data musb_board_data = {
 /*
  * MMC
  */
-#define HSMMC2_MUX	(OMAP_MUX_MODE1 | OMAP_PIN_INPUT_PULLUP)
-#define HSMMC1_MUX	OMAP_PIN_INPUT_PULLUP
 
 static struct omap2_hsmmc_info mmc[] = {
 	{
@@ -290,47 +298,6 @@ static struct regulator_consumer_supply tuna_vmmc_supply[] = {
 		.dev_name = "omap_hsmmc.1",
 	},
 };
-
-
-/*
- * WLAN
- */
-
-#if 0
-static struct regulator_consumer_supply omap4_panda_vmmc5_supply[] = {
-	REGULATOR_SUPPLY("vmmc", "omap_hsmmc.4"),
-};
-
-static struct regulator_init_data panda_vmmc5 = {
-	.constraints = {
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-	},
-	.num_consumer_supplies = ARRAY_SIZE(omap4_panda_vmmc5_supply),
-	.consumer_supplies = omap4_panda_vmmc5_supply,
-};
-
-static struct fixed_voltage_config panda_vwlan = {
-	.supply_name = "vwl1271",
-	.microvolts = 1800000, /* 1.8V */
-	.gpio = GPIO_WIFI_PMENA,
-	.startup_delay = 70000, /* 70msec */
-	.enable_high = 1,
-	.enabled_at_boot = 0,
-	.init_data = &panda_vmmc5,
-};
-
-static struct platform_device omap_vwlan_device = {
-	.name		= "reg-fixed-voltage",
-	.id		= 1,
-	.dev = {
-		.platform_data = &panda_vwlan,
-	},
-};
-
-static struct wl12xx_platform_data omap_panda_wlan_data  __initdata = {
-	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
-};
-#endif /* 0 */
 
 
 /*
@@ -387,9 +354,9 @@ static void tuna_audio_init(void)
 {
 	unsigned int aud_pwron;
 
-	/* twl6040 naudint */
+	/* twl6040 naudint
 	omap_mux_init_signal("sys_nirq2.sys_nirq2", \
-		OMAP_PIN_INPUT_PULLUP);
+		OMAP_PIN_INPUT_PULLUP); */
 
 	/* aud_pwron */
 	if (omap4_tuna_get_type() == TUNA_TYPE_TORO &&
@@ -400,8 +367,8 @@ static void tuna_audio_init(void)
 	omap_mux_init_gpio(aud_pwron, OMAP_PIN_OUTPUT);
 	twl6040_data.audpwron_gpio = aud_pwron;
 
-	omap_mux_init_signal("gpmc_a24.gpio_48", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
-	omap_mux_init_signal("kpd_col3.gpio_171", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
+	/*omap_mux_init_signal("gpmc_a24.gpio_48", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
+	omap_mux_init_signal("kpd_col3.gpio_171", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);*/
 }
 
 
@@ -697,14 +664,24 @@ static struct i2c_board_info __initdata tuna_i2c4_boardinfo[] = {
 	},
 };
 
+static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
+	.sda_pin = GPIO_MHL_SDA_18V,
+	.scl_pin = GPIO_MHL_SCL_18V,
+	.udelay = 3,
+	.timeout = 0,
+};
+ 
+static struct platform_device tuna_gpio_i2c5_device = {
+	.name = "i2c-gpio",
+	.id = 5,
+	.dev = {
+		.platform_data = &tuna_gpio_i2c5_pdata,
+	}
+};
+
 static int __init tuna_i2c_init(void)
 {
 	u32 r;
-
-	/*omap_mux_init_signal("sys_nirq1", OMAP_PIN_INPUT_PULLUP |
-						OMAP_WAKEUP_EN);
-	omap_mux_init_signal("i2c1_scl.i2c1_scl", OMAP_PIN_INPUT_PULLUP);
-	omap_mux_init_signal("i2c1_sda.i2c1_sda", OMAP_PIN_INPUT_PULLUP);*/
 
 	/*
 	 * This will allow unused regulator to be shutdown. This flag
@@ -750,88 +727,78 @@ static int __init tuna_i2c_init(void)
 
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux[] __initdata = {
-	/* WLAN IRQ - GPIO 53 */
-	OMAP4_MUX(GPMC_NCS3, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
-	/* WLAN POWER ENABLE - GPIO 43 */
-	OMAP4_MUX(GPMC_A19, OMAP_MUX_MODE3 | OMAP_PIN_OUTPUT),
-	/* WLAN SDIO: MMC5 CMD */
-	OMAP4_MUX(SDMMC5_CMD, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	/* WLAN SDIO: MMC5 CLK */
-	OMAP4_MUX(SDMMC5_CLK, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	/* WLAN SDIO: MMC5 DAT[0-3] */
-	OMAP4_MUX(SDMMC5_DAT0, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	OMAP4_MUX(SDMMC5_DAT1, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	OMAP4_MUX(SDMMC5_DAT2, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	OMAP4_MUX(SDMMC5_DAT3, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
-	/* gpio 0 - TFP410 PD */
-	OMAP4_MUX(KPD_COL1, OMAP_PIN_OUTPUT | OMAP_MUX_MODE3),
-	/* dispc2_data23 */
-	OMAP4_MUX(USBB2_ULPITLL_STP, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data22 */
-	OMAP4_MUX(USBB2_ULPITLL_DIR, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data21 */
-	OMAP4_MUX(USBB2_ULPITLL_NXT, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data20 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT0, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data19 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT1, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data18 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT2, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data15 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT3, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data14 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT4, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data13 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT5, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data12 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT6, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data11 */
-	OMAP4_MUX(USBB2_ULPITLL_DAT7, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data10 */
-	OMAP4_MUX(DPM_EMU3, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data9 */
-	OMAP4_MUX(DPM_EMU4, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data16 */
-	OMAP4_MUX(DPM_EMU5, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data17 */
-	OMAP4_MUX(DPM_EMU6, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_hsync */
-	OMAP4_MUX(DPM_EMU7, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_pclk */
-	OMAP4_MUX(DPM_EMU8, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_vsync */
-	OMAP4_MUX(DPM_EMU9, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_de */
-	OMAP4_MUX(DPM_EMU10, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data8 */
-	OMAP4_MUX(DPM_EMU11, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data7 */
-	OMAP4_MUX(DPM_EMU12, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data6 */
-	OMAP4_MUX(DPM_EMU13, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data5 */
-	OMAP4_MUX(DPM_EMU14, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data4 */
-	OMAP4_MUX(DPM_EMU15, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data3 */
-	OMAP4_MUX(DPM_EMU16, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data2 */
-	OMAP4_MUX(DPM_EMU17, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data1 */
-	OMAP4_MUX(DPM_EMU18, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* dispc2_data0 */
-	OMAP4_MUX(DPM_EMU19, OMAP_PIN_OUTPUT | OMAP_MUX_MODE5),
-	/* NIRQ2 for twl6040 */
-	OMAP4_MUX(SYS_NIRQ2, OMAP_MUX_MODE0 |
+	/* camera gpios */
+	OMAP4_MUX(MCSPI1_SOMI,
+		OMAP_MUX_MODE3 | OMAP_PIN_INPUT_PULLDOWN), /* gpio_135 */
+	OMAP4_MUX(KPD_COL0,
+		OMAP_MUX_MODE3 | OMAP_PIN_INPUT_PULLDOWN), /* gpio_173 */
+	OMAP4_MUX(GPMC_A19,
+		OMAP_MUX_MODE3 | OMAP_PIN_INPUT_PULLDOWN), /* gpio_43 */
+
+	/* hwrev */
+	OMAP4_MUX(CSI21_DY4, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
+	OMAP4_MUX(CSI21_DX4, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
+	OMAP4_MUX(CSI21_DY3, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
+	OMAP4_MUX(CSI21_DX3, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
+	OMAP4_MUX(USBB2_HSIC_STROBE, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
+	
+	/* fRom */
+	OMAP4_MUX(USBB2_ULPITLL_DAT4,
+		  OMAP_MUX_MODE4 | OMAP_PIN_INPUT), /* mcpsi3_somi */
+	OMAP4_MUX(USBB2_ULPITLL_DAT5,
+		  OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN), /* mcpsi3_cs0 */
+	OMAP4_MUX(USBB2_ULPITLL_DAT6,
+		  OMAP_MUX_MODE4 | OMAP_PIN_INPUT), /* mcpsi3_simo */
+	OMAP4_MUX(USBB2_ULPITLL_DAT7,
+		  OMAP_MUX_MODE4 | OMAP_PIN_INPUT), /* mcpsi3_clk */
+
+	/* I2C */
+	OMAP4_MUX(SYS_NIRQ1, OMAP_PIN_INPUT_PULLUP |
+						OMAP_WAKEUP_EN),
+	OMAP4_MUX(I2C1_SCL, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(I2C1_SDA, OMAP_PIN_INPUT_PULLUP),
+	
+	/* Bluetooth */
+	OMAP4_MUX(GPMC_NCS6, OMAP_PIN_OUTPUT),	/* BT_EN - GPIO 104 */
+	OMAP4_MUX(GPMC_A18, OMAP_PIN_OUTPUT),	/* BT_nRST - GPIO 42 */
+	OMAP4_MUX(DPM_EMU16, OMAP_PIN_OUTPUT),	/* BT_WAKE - GPIO 27 */
+	OMAP4_MUX(KPD_ROW5, OMAP_WAKEUP_EN |	/* BT_HOST_WAKE  - GPIO 177 */
+						OMAP_PIN_INPUT_PULLDOWN),
+						
+	/* GPS */
+	OMAP4_MUX(DPM_EMU7, OMAP_PIN_OUTPUT),			/* AP_AGPS_TSYNC - GPIO 18 */
+	OMAP4_MUX(MCSPI1_SIMO, OMAP_PIN_OUTPUT),		/* GPS_nRST - GPIO 136 */
+	OMAP4_MUX(MCSPI1_CS0, OMAP_PIN_OUTPUT),			/* GPS_PWR_EN - GPIO 137 */
+	OMAP4_MUX(USBB2_ULPITLL_DAT3, OMAP_PIN_OUTPUT),	/* GPS_UART_SEL - GPIO 164 */
+
+	/* MMC */
+	OMAP4_MUX(SDMMC1_DAT0, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT1, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT2, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT3, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT4, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT5, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT6, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_DAT7, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_CMD, OMAP_PIN_INPUT_PULLUP),
+	OMAP4_MUX(SDMMC1_CLK, OMAP_PIN_INPUT_PULLUP),
+
+	/* Audio */
+	OMAP4_MUX(SYS_NIRQ2, OMAP_MUX_MODE0 |	/* twl6040 naudint */
 		  OMAP_PIN_INPUT_PULLUP | OMAP_PIN_OFF_WAKEUPENABLE),
+	OMAP4_MUX(GPMC_A24, OMAP_PIN_OUTPUT | OMAP_MUX_MODE3),
+	OMAP4_MUX(KPD_COL3, OMAP_PIN_OUTPUT | OMAP_MUX_MODE3),
+	
 	/* GPIO_127 for twl6040 */
 	OMAP4_MUX(HDQ_SIO, OMAP_MUX_MODE3 | OMAP_PIN_OUTPUT),
+	
 	/* McPDM */
 	OMAP4_MUX(ABE_PDM_UL_DATA, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_PDM_DL_DATA, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_PDM_FRAME, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
 	OMAP4_MUX(ABE_PDM_LB_CLK, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_CLKS, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
+	
 	/* McBSP1 */
 	OMAP4_MUX(ABE_MCBSP1_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP4_MUX(ABE_MCBSP1_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
@@ -839,17 +806,11 @@ static struct omap_board_mux board_mux[] __initdata = {
 		  OMAP_PULL_ENA),
 	OMAP4_MUX(ABE_MCBSP1_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 
-	/* UART2 - BT/FM/GPS shared transport */
-	OMAP4_MUX(UART2_CTS,	OMAP_PIN_INPUT	| OMAP_MUX_MODE0),
-	OMAP4_MUX(UART2_RTS,	OMAP_PIN_OUTPUT	| OMAP_MUX_MODE0),
-	OMAP4_MUX(UART2_RX,	OMAP_PIN_INPUT	| OMAP_MUX_MODE0),
-	OMAP4_MUX(UART2_TX,	OMAP_PIN_OUTPUT	| OMAP_MUX_MODE0),
-
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 
 static struct omap_board_mux board_wkup_mux[] __initdata = {
-	/* power button */
+	/* Power Button */
 	OMAP4_MUX(SIM_CD, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
@@ -860,11 +821,14 @@ static struct omap_board_mux board_wkup_mux[] __initdata = {
 #endif
 
 
-#if 0
 /*
  * UART
  */
- 
+
+static struct omap_board_data tuna_uart1_bdata __initdata = {
+	.id = 0
+};
+
 /* sample4+ adds gps rts/cts lines */
 static struct omap_device_pad tuna_uart1_pads_sample4[] __initdata = {
 	{
@@ -901,22 +865,28 @@ static struct omap_device_pad tuna_uart1_pads[] __initdata = {
 };
 
 static struct omap_device_pad tuna_uart2_pads[] __initdata = {
-	{
-		.name	= "uart2_cts.uart2_cts",
-		.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
-	},
-	{
-		.name	= "uart2_rts.uart2_rts",
-		.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
-	},
-	{
-		.name	= "uart2_tx.uart2_tx",
-		.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
-	},
-	{
-		.name	= "uart2_rx.uart2_rx",
-		.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
-	},
+		{
+			.name	= "uart2_cts.uart2_cts",
+			.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+		},
+		{
+			.name	= "uart2_rts.uart2_rts",
+			.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
+		},
+		{
+			.name	= "uart2_tx.uart2_tx",
+			.enable	= OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
+		},
+		{
+			.name	= "uart2_rx.uart2_rx",
+			.enable	= OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+		},
+};
+
+static struct omap_board_data tuna_uart2_bdata __initdata = {
+	.id = 1,
+	.pads = tuna_uart2_pads,
+	.pads_cnt = ARRAY_SIZE(tuna_uart2_pads),
 };
 
 static struct omap_device_pad tuna_uart3_pads[] __initdata = {
@@ -932,6 +902,12 @@ static struct omap_device_pad tuna_uart3_pads[] __initdata = {
 	},
 };
 
+static struct omap_board_data tuna_uart3_bdata __initdata = {
+	.id = 2,
+	.pads = tuna_uart3_pads,
+	.pads_cnt = ARRAY_SIZE(tuna_uart3_pads),
+};
+
 static struct omap_device_pad tuna_uart4_pads[] __initdata = {
 	{
 		.name	= "uart4_tx.uart4_tx",
@@ -943,36 +919,45 @@ static struct omap_device_pad tuna_uart4_pads[] __initdata = {
 	},
 };
 
+static struct omap_board_data tuna_uart4_bdata __initdata = {
+	.id = 3,
+	.pads = tuna_uart4_pads,
+	.pads_cnt = ARRAY_SIZE(tuna_uart4_pads),
+};
+
+#define DEFAULT_RXDMA_POLLRATE		1	/* RX DMA polling rate (us) */
+#define DEFAULT_RXDMA_BUFSIZE		4096	/* RX DMA buffer size */
+#define DEFAULT_RXDMA_TIMEOUT		(3 * HZ)/* RX DMA timeout (jiffies) */
+
 static struct omap_uart_port_info tuna_uart2_info __initdata = {
-	.use_dma	= 0,
-/*	.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
+	.dma_enabled	= false,
+	.dma_rx_buf_size = DEFAULT_RXDMA_BUFSIZE,
 	.dma_rx_poll_rate = DEFAULT_RXDMA_POLLRATE,
-	.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,*/
-	.auto_sus_timeout = 0,
-	.wake_peer	= bcm_bt_lpm_exit_lpm_locked,
-	.rts_mux_driver_control = 1,
+	.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
+	.autosuspend_timeout = 0,
+	//.wake_peer	= bcm_bt_lpm_exit_lpm_locked,
+	//.rts_mux_driver_control = 1,
 };
 
 static inline void __init board_serial_init(void)
 {
-	struct omap_device_pad *uart1_pads;
-	int uart1_pads_sz;
-
 	if (omap4_tuna_get_revision() >= TUNA_REV_SAMPLE_4) {
-		uart1_pads = tuna_uart1_pads_sample4;
-		uart1_pads_sz = ARRAY_SIZE(tuna_uart1_pads_sample4);
+		tuna_uart1_bdata.pads = tuna_uart1_pads_sample4;
+		tuna_uart1_bdata.pads_cnt = ARRAY_SIZE(tuna_uart1_pads_sample4);
 	} else {
-		uart1_pads = tuna_uart1_pads;
-		uart1_pads_sz = ARRAY_SIZE(tuna_uart1_pads);
+		tuna_uart1_bdata.pads = tuna_uart1_pads;
+		tuna_uart1_bdata.pads_cnt = ARRAY_SIZE(tuna_uart1_pads);
 	}
 
-	omap_serial_init_port_pads(0, uart1_pads, uart1_pads_sz, NULL);
-	omap_serial_init_port_pads(1, tuna_uart2_pads,
-		ARRAY_SIZE(tuna_uart2_pads), &tuna_uart2_info);
-	omap_serial_init_port_pads(3, tuna_uart4_pads,
-				   ARRAY_SIZE(tuna_uart4_pads), NULL);
+	omap_serial_init_port(&tuna_uart1_bdata, NULL);
+	omap_serial_init_port(&tuna_uart2_bdata, &tuna_uart2_info);
+#ifndef CONFIG_OMAP_FIQ_DEBUGGER
+	omap_serial_init_port(&tuna_uart3_bdata, NULL);
+#endif
+	omap_serial_init_port(&tuna_uart4_bdata, NULL);
 }
 
+#ifdef CONFIG_OMAP_FIQ_DEBUGGER
 /* fiq_debugger initializes really early but OMAP resource mgmt
  * is not yet ready @ arch_init, so init the serial debugger later */
 static int __init board_serial_debug_init(void)
@@ -981,12 +966,13 @@ static int __init board_serial_debug_init(void)
 			tuna_uart3_pads, ARRAY_SIZE(tuna_uart3_pads));
 }
 device_initcall(board_serial_debug_init);
-#endif /* 0 */
+#endif
 
 
-/* 
- * Miscellaneous Routines
+/*
+ * GPS
  */
+ 
 struct class *sec_class;
 EXPORT_SYMBOL(sec_class);
 
@@ -997,6 +983,338 @@ static int __init sec_common_init(void)
 		pr_err("Failed to create class(sec)!\n");
 
 	return 0;
+}
+
+/*
+ * The UART1 is for GPS, and CSR GPS chip should control uart1 rts level
+ * for gps firmware download.
+ */
+static int uart1_rts_ctrl_write(struct file *file, const char __user *buffer,
+						size_t count, loff_t *offs)
+{
+	char buf[10] = {0,};
+
+	if (omap4_tuna_get_revision() < TUNA_REV_SAMPLE_4)
+		return -ENXIO;
+	if (count > sizeof(buf) - 1)
+		return -EINVAL;
+	if (copy_from_user(buf, buffer, count))
+		return -EFAULT;
+
+	if (!strncmp(buf, "1", 1)) {
+		omap_mux_init_signal("uart1_rts", OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE7);
+	} else if (!strncmp(buf, "0", 1)) {
+		omap_mux_init_signal("uart1_rts", OMAP_PIN_OUTPUT | OMAP_MUX_MODE1);
+	}
+
+	return count;
+}
+
+static const struct file_operations uart1_rts_ctrl_proc_fops = {
+	.write	= uart1_rts_ctrl_write,
+};
+
+static int __init tuna_gps_rts_ctrl_init(void)
+{
+	struct proc_dir_entry *p_entry;
+
+	p_entry = proc_create("mcspi1_cs3_ctrl", 0666, NULL,
+						&uart1_rts_ctrl_proc_fops);
+
+	if (!p_entry)
+		return -ENOMEM;
+
+	return 0;
+}
+
+#if 0
+static void tuna_gsd4t_gps_gpio(void)
+{
+	/* AP_AGPS_TSYNC - GPIO 18 */
+	omap_mux_init_signal("dpm_emu7.gpio_18", OMAP_PIN_OUTPUT);
+	/* GPS_nRST - GPIO 136 */
+	omap_mux_init_signal("mcspi1_simo.gpio_136", OMAP_PIN_OUTPUT);
+	/* GPS_PWR_EN - GPIO 137 */
+	omap_mux_init_signal("mcspi1_cs0.gpio_137", OMAP_PIN_OUTPUT);
+	/* GPS_UART_SEL - GPIO 164 */
+	omap_mux_init_signal("usbb2_ulpitll_dat3.gpio_164", OMAP_PIN_OUTPUT);
+}
+#endif
+
+static void tuna_gsd4t_gps_init(void)
+{
+	struct device *gps_dev;
+
+	gps_dev = device_create(sec_class, NULL, 0, NULL, "gps");
+	if (IS_ERR(gps_dev)) {
+		pr_err("Failed to create device(gps)!\n");
+		goto err;
+	}
+	//tuna_gsd4t_gps_gpio();
+
+	gpio_request(GPIO_AP_AGPS_TSYNC, "AP_AGPS_TSYNC");
+	gpio_direction_output(GPIO_AP_AGPS_TSYNC, 0);
+
+	gpio_request(GPIO_GPS_nRST, "GPS_nRST");
+	gpio_direction_output(GPIO_GPS_nRST, 1);
+
+	gpio_request(GPIO_GPS_PWR_EN, "GPS_PWR_EN");
+	gpio_direction_output(GPIO_GPS_PWR_EN, 0);
+
+	gpio_request(GPIO_GPS_UART_SEL , "GPS_UART_SEL");
+	gpio_direction_output(GPIO_GPS_UART_SEL , 0);
+
+	gpio_export(GPIO_GPS_nRST, 1);
+	gpio_export(GPIO_GPS_PWR_EN, 1);
+
+	gpio_export_link(gps_dev, "GPS_nRST", GPIO_GPS_nRST);
+	gpio_export_link(gps_dev, "GPS_PWR_EN", GPIO_GPS_PWR_EN);
+
+	tuna_gps_rts_ctrl_init();
+
+err:
+	return;
+}
+
+
+/*
+ * Camera & Modem
+ */
+
+/* SPI flash memory in camera module */
+#define F_ROM_SPI_BUS_NUM	3
+#define F_ROM_SPI_CS		0
+#define F_ROM_SPI_SPEED_HZ	24000000
+ 
+static const struct flash_platform_data w25q80_pdata = {
+	.name = "w25q80",
+	.type = "w25q80",
+};
+
+static struct omap2_mcspi_device_config f_rom_mcspi_config = {
+	.turbo_mode	= 0,
+	//.single_channel	= 1,	/* 0: slave, 1: master */
+	//.swap_datalines	= 1,
+};
+ 
+static struct spi_board_info tuna_f_rom[] __initdata = {
+ 	{
+		.modalias = "m25p80",
+		.controller_data = &f_rom_mcspi_config,
+		.platform_data = &w25q80_pdata,
+		.bus_num = F_ROM_SPI_BUS_NUM,
+		.chip_select = F_ROM_SPI_CS,
+		.max_speed_hz = F_ROM_SPI_SPEED_HZ,
+		.mode = SPI_MODE_0,
+	}
+};
+
+static void tuna_from_init(void)
+{
+	int err;
+
+	/*if (tuna_hw_rev >= 0x07)
+		f_rom_mcspi_config.swap_datalines = 0;*/
+
+	err = spi_register_board_info(tuna_f_rom, ARRAY_SIZE(tuna_f_rom));
+	if (err)
+		pr_err("failed to register SPI F-ROM\n");
+}
+
+/*SPI for LTE modem bootloader*/
+#define LTE_MODEM_SPI_BUS_NUM 4
+#define LTE_MODEM_SPI_CS  0
+#define LTE_MODEM_SPI_MAX_HZ 1500000
+
+struct lte_modem_bootloader_platform_data lte_modem_bootloader_pdata = {
+	.name = "lte_modem_int",
+	.gpio_lte2ap_status = OMAP_GPIO_CMC2AP_INT1,
+};
+
+static struct omap2_mcspi_device_config lte_mcspi_config = {
+	.turbo_mode	= 0,
+	//.single_channel	= 1,	/* 0: slave, 1: master */
+};
+
+static struct spi_board_info tuna_lte_modem[] __initdata = {
+	{
+		.modalias = "lte_modem_spi",
+		.controller_data = &lte_mcspi_config,
+		.platform_data = &lte_modem_bootloader_pdata,
+		.max_speed_hz = LTE_MODEM_SPI_MAX_HZ,
+		.bus_num = LTE_MODEM_SPI_BUS_NUM,
+		.chip_select = LTE_MODEM_SPI_CS,
+		.mode = SPI_MODE_0,
+	},
+};
+
+
+/* 
+ * Miscellaneous Routines
+ */
+
+static struct ion_platform_data tuna_ion_data = {
+	.nr = 3,
+	.heaps = {
+		{
+			.type = ION_HEAP_TYPE_CARVEOUT,
+			.id   = OMAP_ION_HEAP_SECURE_INPUT,
+			.name = "secure_input",
+			.base = PHYS_ADDR_SMC_MEM -
+					OMAP_TUNA_ION_HEAP_SECURE_INPUT_SIZE,
+			.size = OMAP_TUNA_ION_HEAP_SECURE_INPUT_SIZE,
+		},
+		{	.type = OMAP_ION_HEAP_TYPE_TILER,
+			.id   = OMAP_ION_HEAP_TILER,
+			.name = "tiler",
+			.base = PHYS_ADDR_DUCATI_MEM -
+					OMAP_TUNA_ION_HEAP_TILER_SIZE,
+			.size = OMAP_TUNA_ION_HEAP_TILER_SIZE,
+		},
+		{	.type = OMAP_ION_HEAP_TYPE_TILER,
+			.id   = OMAP_ION_HEAP_NONSECURE_TILER,
+			.name = "nonsecure_tiler",
+			.base = PHYS_ADDR_DUCATI_MEM -
+					OMAP_TUNA_ION_HEAP_TILER_SIZE -
+					OMAP_TUNA_ION_HEAP_NONSECURE_TILER_SIZE,
+			.size = OMAP_TUNA_ION_HEAP_NONSECURE_TILER_SIZE,
+		},
+	},
+};
+
+static struct platform_device tuna_ion_device = {
+	.name = "ion-omap4",
+	.id = -1,
+	.dev = {
+		.platform_data = &tuna_ion_data,
+	},
+};
+
+static ssize_t tuna_soc_family_show(struct kobject *kobj,
+				    struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "OMAP%04x\n", GET_OMAP_TYPE);
+}
+
+static ssize_t tuna_soc_revision_show(struct kobject *kobj,
+				 struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "ES%d.%d\n", (GET_OMAP_REVISION() >> 4) & 0xf,
+		       GET_OMAP_REVISION() & 0xf);
+}
+
+static ssize_t tuna_soc_die_id_show(struct kobject *kobj,
+				 struct kobj_attribute *attr, char *buf)
+{
+	struct omap_die_id oid;
+	omap_get_die_id(&oid);
+	return sprintf(buf, "%08X-%08X-%08X-%08X\n", oid.id_3, oid.id_2,
+			oid.id_1, oid.id_0);
+}
+
+static ssize_t tuna_soc_prod_id_show(struct kobject *kobj,
+				 struct kobj_attribute *attr, char *buf)
+{
+	struct omap_die_id oid;
+	omap_get_production_id(&oid);
+	return sprintf(buf, "%08X-%08X\n", oid.id_1, oid.id_0);
+}
+
+static ssize_t tuna_soc_msv_show(struct kobject *kobj,
+				 struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%08X\n", omap_ctrl_readl(0x013c));
+}
+
+static const char *omap_types[] = {
+	[OMAP2_DEVICE_TYPE_TEST]	= "TST",
+	[OMAP2_DEVICE_TYPE_EMU]		= "EMU",
+	[OMAP2_DEVICE_TYPE_SEC]		= "HS",
+	[OMAP2_DEVICE_TYPE_GP]		= "GP",
+	[OMAP2_DEVICE_TYPE_BAD]		= "BAD",
+};
+
+static ssize_t tuna_soc_type_show(struct kobject *kobj,
+				 struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s\n", omap_types[omap_type()]);
+}
+
+#define TUNA_ATTR_RO(_type, _name, _show) \
+	struct kobj_attribute tuna_##_type##_prop_attr_##_name = \
+		__ATTR(_name, S_IRUGO, _show, NULL)
+
+static TUNA_ATTR_RO(soc, family, tuna_soc_family_show);
+static TUNA_ATTR_RO(soc, revision, tuna_soc_revision_show);
+static TUNA_ATTR_RO(soc, type, tuna_soc_type_show);
+static TUNA_ATTR_RO(soc, die_id, tuna_soc_die_id_show);
+static TUNA_ATTR_RO(soc, production_id, tuna_soc_prod_id_show);
+static TUNA_ATTR_RO(soc, msv, tuna_soc_msv_show);
+
+static struct attribute *tuna_soc_prop_attrs[] = {
+	&tuna_soc_prop_attr_family.attr,
+	&tuna_soc_prop_attr_revision.attr,
+	&tuna_soc_prop_attr_type.attr,
+	&tuna_soc_prop_attr_die_id.attr,
+	&tuna_soc_prop_attr_production_id.attr,
+	&tuna_soc_prop_attr_msv.attr,
+	NULL,
+};
+
+static struct attribute_group tuna_soc_prop_attr_group = {
+	.attrs = tuna_soc_prop_attrs,
+};
+
+static ssize_t tuna_board_revision_show(struct kobject *kobj,
+	 struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s (0x%02x)\n", omap4_tuna_hw_rev_name(),
+		tuna_hw_rev);
+}
+
+static TUNA_ATTR_RO(board, revision, tuna_board_revision_show);
+static struct attribute *tuna_board_prop_attrs[] = {
+	&tuna_board_prop_attr_revision.attr,
+	NULL,
+};
+
+static struct attribute_group tuna_board_prop_attr_group = {
+	.attrs = tuna_board_prop_attrs,
+};
+
+static void __init omap4_tuna_create_board_props(void)
+{
+	struct kobject *board_props_kobj;
+	struct kobject *soc_kobj;
+	int ret = 0;
+
+	board_props_kobj = kobject_create_and_add("board_properties", NULL);
+	if (!board_props_kobj)
+		goto err_board_obj;
+
+	soc_kobj = kobject_create_and_add("soc", board_props_kobj);
+	if (!soc_kobj)
+		goto err_soc_obj;
+
+	ret = sysfs_create_group(board_props_kobj, &tuna_board_prop_attr_group);
+	if (ret)
+		goto err_board_sysfs_create;
+
+	ret = sysfs_create_group(soc_kobj, &tuna_soc_prop_attr_group);
+	if (ret)
+		goto err_soc_sysfs_create;
+
+	return;
+
+err_soc_sysfs_create:
+	sysfs_remove_group(board_props_kobj, &tuna_board_prop_attr_group);
+err_board_sysfs_create:
+	kobject_put(soc_kobj);
+err_soc_obj:
+	kobject_put(board_props_kobj);
+err_board_obj:
+	if (!board_props_kobj || !soc_kobj || ret)
+		pr_err("failed to create board_properties\n");
 }
 
 
@@ -1024,13 +1342,22 @@ static struct platform_device ramconsole_device = {
 	},*/
 };
 
+static struct platform_device tuna_spdif_dit_device = {
+	.name		= "spdif-dit",
+	.id		= 0,
+};
+
 static struct platform_device *tuna_devices[] __initdata = {
 	&ramconsole_device,
+	&tuna_ion_device,
 	&wl1271_device,
+	&bcm4330_bluetooth_device,
 	&twl6030_madc_device,
 	&tuna_abe_audio,
 	&tuna_hdmi_audio_codec,
 	&btwilink_device,
+	&tuna_gpio_i2c5_device,
+	&tuna_spdif_dit_device,
 };
 
 /*
@@ -1143,20 +1470,6 @@ static void __init tuna_init(void)
 
 	register_reboot_notifier(&tuna_reboot_notifier);
 
-	/* hsmmc d0-d7 */
-	omap_mux_init_signal("sdmmc1_dat0.sdmmc1_dat0", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat1.sdmmc1_dat1", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat2.sdmmc1_dat2", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat3.sdmmc1_dat3", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat4.sdmmc1_dat4", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat5.sdmmc1_dat5", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat6.sdmmc1_dat6", HSMMC1_MUX);
-	omap_mux_init_signal("sdmmc1_dat7.sdmmc1_dat7", HSMMC1_MUX);
-	/* hsmmc cmd */
-	omap_mux_init_signal("sdmmc1_cmd.sdmmc1_cmd", HSMMC1_MUX);
-	/* hsmmc clk */
-	omap_mux_init_signal("sdmmc1_clk.sdmmc1_clk", HSMMC1_MUX);
-
 	gpio_request(158, "emmc_en");
 	gpio_direction_output(158, 1);
 	omap_mux_init_gpio(158, OMAP_PIN_INPUT_PULLUP);
@@ -1178,22 +1491,42 @@ static void __init tuna_init(void)
 		omap_mux_init_signal("mcspi4_cs0", OMAP_MUX_MODE0);
 	}
 
-	/* ----------------
-	omap_panda_wlan_data.irq = gpio_to_irq(GPIO_WIFI_IRQ);
-	ret = wl12xx_set_platform_data(&omap_panda_wlan_data);
-	if (ret)
-		pr_err("error setting wl12xx data: %d\n", ret);*/
-
+	tuna_wlan_init();
+	tuna_audio_init();
 	tuna_i2c_init();
 	platform_add_devices(tuna_devices, ARRAY_SIZE(tuna_devices));
-	//platform_device_register(&omap_vwlan_device);
-	omap_serial_init();
+	board_serial_init();
 	omap_sdrc_init(NULL, NULL);
 	omap4_twl6030_hsmmc_init(mmc);
-	omap4_ehci_init();
 	usb_bind_phy("musb-hdrc.2.auto", 0, "omap-usb2.3.auto");
 	usb_musb_init(&musb_board_data);
+	omap4_tuna_create_board_props();
+	if (TUNA_TYPE_TORO == omap4_tuna_get_type()) {
+		spi_register_board_info(tuna_lte_modem,
+				ARRAY_SIZE(tuna_lte_modem));
+	}
+	tuna_from_init();
 	omap4_tuna_display_init();
+	omap4_tuna_input_init();
+	omap4_tuna_nfc_init();
+	omap4_tuna_power_init();
+//	omap4_tuna_jack_init();
+	omap4_tuna_sensors_init();
+//	omap4_tuna_led_init();
+//	omap4_tuna_connector_init();
+//	omap4_tuna_pogo_init();
+#ifdef CONFIG_OMAP_HSI_DEVICE
+	if (TUNA_TYPE_MAGURO == omap4_tuna_get_type())
+		omap_hsi_init();
+#endif
+#ifdef CONFIG_USB_EHCI_HCD_OMAP
+	if (TUNA_TYPE_TORO == omap4_tuna_get_type()) {
+#ifdef CONFIG_SEC_MODEM
+		modem_toro_init();
+#endif
+		omap4_ehci_init();
+	}
+#endif
 }
 
 static void __init tuna_reserve(void)
@@ -1221,7 +1554,7 @@ static void __init tuna_reserve(void)
 	/* ipu needs to recognize secure input buffer area as well */
 	omap_ipu_set_static_mempool(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE +
 					OMAP_TUNA_ION_HEAP_SECURE_INPUT_SIZE);
-#endif /* 0 */
+#endif
 	omap_reserve();
 }
 
