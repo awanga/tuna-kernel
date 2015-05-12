@@ -12,6 +12,7 @@ obj-$(CONFIG_POWER_TI_HARDWARE_VOLTAGE_CONTROL) += $(omap-volt-common)
 endif
 
 ifneq ($(CONFIG_ARCH_OMAP4),)
+obj-$(CONFIG_POWER_TI_HARDWARE_VOLTAGE_CONTROL) += omap3_prm_voltsetup.o
 obj-$(CONFIG_POWER_TI_HARDWARE_VOLTAGE_CONTROL) += $(omap-volt-common)
 endif
 

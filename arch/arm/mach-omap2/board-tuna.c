@@ -40,6 +40,7 @@
 #include <linux/wl12xx.h>
 #include <linux/irqchip/arm-gic.h>
 
+#include <linux/platform_data/ram_console.h>
 #include <linux/platform_data/serial-omap.h>
 #include <linux/platform_data/spi-omap2-mcspi.h>
 #include <linux/platform_data/omap-abe-twl6040.h>
@@ -1002,9 +1003,9 @@ static int uart1_rts_ctrl_write(struct file *file, const char __user *buffer,
 		return -EFAULT;
 
 	if (!strncmp(buf, "1", 1)) {
-		omap_mux_init_signal("uart1_rts", OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE7);
+		//omap_mux_set_gpio(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE7, "uart1_rts");
 	} else if (!strncmp(buf, "0", 1)) {
-		omap_mux_init_signal("uart1_rts", OMAP_PIN_OUTPUT | OMAP_MUX_MODE1);
+		//omap_mux_set_gpio(OMAP_PIN_OUTPUT | OMAP_MUX_MODE1, "uart1_rts");
 	}
 
 	return count;
@@ -1285,7 +1286,7 @@ static struct attribute_group tuna_board_prop_attr_group = {
 static void __init omap4_tuna_create_board_props(void)
 {
 	struct kobject *board_props_kobj;
-	struct kobject *soc_kobj;
+	struct kobject *soc_kobj = NULL;
 	int ret = 0;
 
 	board_props_kobj = kobject_create_and_add("board_properties", NULL);
@@ -1330,16 +1331,16 @@ static struct resource ramconsole_resources[] = {
 	},
 };
 
-//static struct ram_console_platform_data ramconsole_pdata;
+static struct ram_console_platform_data ramconsole_pdata;
 
 static struct platform_device ramconsole_device = {
 	.name           = "ram_console",
 	.id             = -1,
 	.num_resources  = ARRAY_SIZE(ramconsole_resources),
 	.resource       = ramconsole_resources,
-	/*.dev		= {
+	.dev		= {
 		.platform_data = &ramconsole_pdata,
-	},*/
+	},
 };
 
 static struct platform_device tuna_spdif_dit_device = {
@@ -1494,6 +1495,8 @@ static void __init tuna_init(void)
 	tuna_wlan_init();
 	tuna_audio_init();
 	tuna_i2c_init();
+	tuna_gsd4t_gps_init();
+	//ramconsole_pdata.bootinfo = omap4_get_resetreason();
 	platform_add_devices(tuna_devices, ARRAY_SIZE(tuna_devices));
 	board_serial_init();
 	omap_sdrc_init(NULL, NULL);

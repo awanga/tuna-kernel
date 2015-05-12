@@ -66,6 +66,9 @@ arch/*/include/generated
 # stgit generated dirs
 patches-*
 
+# dtb generated files
+arch/*/boot/dts/dtb_list
+
 # quilt's files
 patches
 series
