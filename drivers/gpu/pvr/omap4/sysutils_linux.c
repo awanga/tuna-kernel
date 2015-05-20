@@ -43,6 +43,10 @@
 #include <linux/pm_runtime.h>
 #include <linux/opp.h>
 
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#include "sgxfreq.h"
+#endif
+
 #if defined(SUPPORT_DRI_DRM_PLUGIN)
 #include <drm/drmP.h>
 #include <drm/drm.h>
@@ -131,8 +135,22 @@ IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
 #if !defined(NO_HARDWARE)
 	PVR_ASSERT(atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0);
 #endif
-	psTimingInfo->ui32CoreClockSpeed =
-		gpsSysSpecificData->pui32SGXFreqList[gpsSysSpecificData->ui32SGXFreqListIndex];
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	/*
+	 * The core SGX driver and ukernel code expects SGX frequency
+	 * changes to occur only just prior to SGX initialization. We
+	 * don't wish to constrain the DVFS implementation as such. So
+	 * we let these components believe that frequency setting is
+	 * always at maximum. This produces safe values for derived
+	 * parameters such as APM and HWR timeouts.
+	 */
+	psTimingInfo->ui32CoreClockSpeed = (IMG_UINT32)sgxfreq_get_freq_max();
+#else /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+	/*psTimingInfo->ui32CoreClockSpeed =
+		gpsSysSpecificData->pui32SGXFreqList[gpsSysSpecificData->ui32SGXFreqListIndex];*/
+	psTimingInfo->ui32CoreClockSpeed = SYS_SGX_CLOCK_SPEED;
+#endif
+
 	psTimingInfo->ui32HWRecoveryFreq = SYS_SGX_HWRECOVERY_TIMEOUT_FREQ;
 	psTimingInfo->ui32uKernelFreq = SYS_SGX_PDS_TIMER_FREQ;
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
@@ -206,6 +224,9 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
 		}
 	}
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_clk_on();
+#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 #endif
 	SysEnableSGXInterrupts(psSysData);
 
@@ -252,6 +273,9 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 		if (sgx_idle_mode == 0)
 			RequestSGXFreq(psSysData, IMG_FALSE);
 	}
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_clk_off();
+#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 #endif
 
 	
@@ -546,104 +570,22 @@ PVRSRV_ERROR SysPMRuntimeUnregister(void)
 
 PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
-	IMG_INT32 opp_count;
-	IMG_UINT32 i, *freq_list;
-	struct opp *opp;
-	unsigned long freq;
-
-	/**
-	 * We query and store the list of SGX frequencies just this once under the
-	 * assumption that they are unchanging, e.g. no disabling of high frequency
-	 * option for thermal management. This is currently valid for 4430 and 4460.
-	 */
-	rcu_read_lock();
-	opp_count = opp_get_opp_count(&gpsPVRLDMDev->dev);
-	if (opp_count < 1)
-	{
-		rcu_read_unlock();
-		PVR_DPF((PVR_DBG_ERROR, "SysDvfsInitialize: Could not retrieve opp count"));
+	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	if (sgxfreq_init(&gpsPVRLDMDev->dev))
 		return PVRSRV_ERROR_NOT_SUPPORTED;
-	}
-
-	/**
-	 * Allocate the frequency list with a slot for each available frequency plus
-	 * one additional slot to hold a designated frequency value to assume when in
-	 * an unknown frequency state.
-	 */
-	freq_list = kmalloc((opp_count + 1) * sizeof(IMG_UINT32), GFP_ATOMIC);
-	if (!freq_list)
-	{
-		rcu_read_unlock();
-		PVR_DPF((PVR_DBG_ERROR, "SysDvfsInitialize: Could not allocate frequency list"));
-		return PVRSRV_ERROR_OUT_OF_MEMORY;
-	}
-
-	/**
-	 * Fill in frequency list from lowest to highest then finally the "unknown"
-	 * frequency value. We use the highest available frequency as our assumed value
-	 * when in an unknown state, because it is safer for APM and hardware recovery
-	 * timers to be longer than intended rather than shorter.
-	 */
-	freq = 0;
-	for (i = 0; i < opp_count; i++)
-	{
-		opp = opp_find_freq_ceil(&gpsPVRLDMDev->dev, &freq);
-		if (IS_ERR_OR_NULL(opp))
-		{
-			rcu_read_unlock();
-			PVR_DPF((PVR_DBG_ERROR, "SysDvfsInitialize: Could not retrieve opp level %d", i));
-			kfree(freq_list);
-			return PVRSRV_ERROR_NOT_SUPPORTED;
-		}
-		freq_list[i] = (IMG_UINT32)freq;
-		freq++;
-	}
-	rcu_read_unlock();
-	freq_list[opp_count] = freq_list[opp_count - 1];
-
-	psSysSpecificData->ui32SGXFreqListSize = opp_count + 1;
-	psSysSpecificData->pui32SGXFreqList = freq_list;
-	/* Start in unknown state - no frequency request to DVFS yet made */
-	psSysSpecificData->ui32SGXFreqListIndex = opp_count;
+#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 
 	return PVRSRV_OK;
 }
 
 PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
-	/**
-	 * We assume this function is only called if SysDvfsInitialize() was
-	 * completed successfully before.
-	 *
-	 * The DVFS interface does not allow us to actually unregister as a
-	 * user of SGX, so we do the next best thing which is to lower our
-	 * required frequency to the minimum if not already set. DVFS may
-	 * report busy if early in initialization, but all other errors are
-	 * considered serious.
-	 */
-	if (psSysSpecificData->ui32SGXFreqListIndex != 0)
-	{
-		IMG_INT32 res;
-		struct gpu_platform_data *pdata;
-
-		pdata = (struct gpu_platform_data *)gpsPVRLDMDev->dev.platform_data;
-
-		PVR_ASSERT(pdata->device_scale != IMG_NULL);
-		res = pdata->device_scale(&gpsPVRLDMDev->dev,
-				&gpsPVRLDMDev->dev,
-				psSysSpecificData->pui32SGXFreqList[0]);
-
-		if (res == -EBUSY)
-			PVR_DPF((PVR_DBG_WARNING, "SysDvfsDeinitialize: Unable to scale SGX frequency (EBUSY)"));
-		else if (res < 0)
-			PVR_DPF((PVR_DBG_ERROR, "SysDvfsDeinitialize: Unable to scale SGX frequency (%d)", res));
-
-		psSysSpecificData->ui32SGXFreqListIndex = 0;
-	}
-
-	kfree(psSysSpecificData->pui32SGXFreqList);
-	psSysSpecificData->pui32SGXFreqList = 0;
-	psSysSpecificData->ui32SGXFreqListSize = 0;
+	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	if (sgxfreq_deinit())
+		return PVRSRV_ERROR_NOT_SUPPORTED;
+#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 
 	return PVRSRV_OK;
 }
@@ -686,3 +628,19 @@ SysDRMUnregisterPlugin(PVRSRV_DRM_PLUGIN *psDRMPlugin)
 	}
 }
 #endif
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_idle();
+#endif
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
+{
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+		sgxfreq_notif_sgx_active();
+#else
+	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
+#endif
+}

@@ -26,6 +26,16 @@
 
 #if defined(__linux__)
 #include "sysutils_linux.c"
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#include "sgxfreq.c"
+#include "sgxfreq_onoff.c"
+#include "sgxfreq_activeidle.c"
+#include "sgxfreq_on3demand.c"
+#include "sgxfreq_userspace.c"
+#if defined(CONFIG_THERMAL_FRAMEWORK)
+#include "sgxfreq_cool.c"
+#endif
+#endif
 #endif
 
 
