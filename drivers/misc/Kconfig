@@ -553,13 +553,6 @@ config USB_SWITCH_FSA9480
 	  stereo and mono audio, video, microphone and UART data to use
 	  a common connector port.
 
-config OMAP_DIE_TEMP_SENSOR
-        bool "OMAP On-Die temp sensor support"
-        depends on OMAP_TEMP_SENSOR
-        help
-          Enabling this config will give support for the on-die
-          temp sensor for the OMAP platform.
-
 config LEDS_AN30259A
         tristate "LED driver for panasonic AN30259A RGB LED"
         depends on I2C
