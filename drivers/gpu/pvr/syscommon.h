@@ -141,6 +141,9 @@ PVRSRV_ERROR SysPowerLockWrap(IMG_BOOL bTryLock);
 IMG_VOID SysPowerLockUnwrap(IMG_VOID);
 #endif
 
+IMG_VOID SysSGXIdleEntered(IMG_VOID);
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle);
+
 PVRSRV_ERROR SysOEMFunction (	IMG_UINT32	ui32ID,
 								IMG_VOID	*pvIn,
 								IMG_UINT32  ulInSize,

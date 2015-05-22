@@ -1182,12 +1182,15 @@ static void sgx_idle_log_init(void)
 		PVR_DPF((PVR_DBG_ERROR,"Failed to creat sgx_idle debug file"));
 }
 
-static ktime_t sgx_idle_last_busy;
 static struct hrtimer sgx_idle_timer;
 static struct workqueue_struct *sgx_idle_wq;
 static struct work_struct sgx_idle_work;
 
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
+static ktime_t sgx_idle_last_busy;
+
 void RequestSGXFreq(SYS_DATA *psSysData, IMG_BOOL bMaxFreq);
+#endif
 
 enum hrtimer_restart sgx_idle_timer_callback(struct hrtimer *timer)
 {
@@ -1198,11 +1201,14 @@ enum hrtimer_restart sgx_idle_timer_callback(struct hrtimer *timer)
 void sgx_idle_work_func(struct work_struct *work)
 {
 	sgx_idle_log_event(SGX_SLOW);
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
 	RequestSGXFreq(gpsSysData, IMG_FALSE);
+#endif
 }
 
 IMG_VOID SysSGXIdleTransition(IMG_BOOL bSGXIdle)
 {
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
 	int ret;
 
 	if (bSGXIdle) {
@@ -1246,6 +1252,9 @@ IMG_VOID SysSGXIdleTransition(IMG_BOOL bSGXIdle)
 		sgx_idle_last_busy = ktime_get();
 	}
 	PVR_DPF((PVR_DBG_MESSAGE, "SysSGXIdleTransition switch to %u", bSGXIdle));
+#else
+	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
+#endif
 }
 
 static void sgx_idle_init(void)

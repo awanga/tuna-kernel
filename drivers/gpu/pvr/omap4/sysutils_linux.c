@@ -161,6 +161,7 @@ IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
 	psTimingInfo->ui32ActivePowManLatencyms = sgx_apm_latency;
 }
 
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
 void RequestSGXFreq(SYS_DATA *psSysData, IMG_BOOL bMaxFreq)
 {
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
@@ -193,6 +194,7 @@ void RequestSGXFreq(SYS_DATA *psSysData, IMG_BOOL bMaxFreq)
 	}
 
 }
+#endif
 
 void sgx_idle_log_on(void);
 void sgx_idle_log_off(void);
@@ -214,8 +216,10 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 	{
 		int res;
 
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
 		if (sgx_idle_mode == 0)
 			RequestSGXFreq(psSysData, IMG_TRUE);
+#endif
 
 		res = pm_runtime_get_sync(&gpsPVRLDMDev->dev);
 		if (res < 0)
@@ -270,8 +274,10 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 			PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: pm_runtime_put_sync failed (%d)", -res));
 		}
 
+#ifndef SYS_OMAP4_HAS_DVFS_FRAMEWORK
 		if (sgx_idle_mode == 0)
 			RequestSGXFreq(psSysData, IMG_FALSE);
+#endif
 	}
 #if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
 	sgxfreq_notif_sgx_clk_off();

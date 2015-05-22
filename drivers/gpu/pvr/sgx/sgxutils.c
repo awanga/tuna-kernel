@@ -95,6 +95,9 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 	if (!psDevInfo->bSGXIdle &&
 		((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) != 0))
 	{
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+		SysSGXIdleEntered();
+#endif
 		psDevInfo->bSGXIdle = IMG_TRUE;
 		SysSGXIdleTransition(psDevInfo->bSGXIdle);
 	}
@@ -103,6 +106,10 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 	{
 		psDevInfo->bSGXIdle = IMG_FALSE;
 		SysSGXIdleTransition(psDevInfo->bSGXIdle);
+
+#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+		SysSGXCommandPending(psDevInfo->bSGXIdle);
+#endif
 	}
 #endif 
 
