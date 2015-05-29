@@ -54,6 +54,14 @@ static struct powerdomain core_44xx_pwrdm = {
 		[4] = PWRSTS_ON,	/* ducati_unicache */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* gfx_44xx_pwrdm: 3D accelerator power domain */
@@ -71,6 +79,14 @@ static struct powerdomain gfx_44xx_pwrdm = {
 		[0] = PWRSTS_ON,	/* gfx_mem */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_CSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* abe_44xx_pwrdm: Audio back end power domain */
@@ -91,6 +107,14 @@ static struct powerdomain abe_44xx_pwrdm = {
 		[1] = PWRSTS_ON,	/* periphmem */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* dss_44xx_pwrdm: Display subsystem power domain */
@@ -109,6 +133,14 @@ static struct powerdomain dss_44xx_pwrdm = {
 		[0] = PWRSTS_ON,	/* dss_mem */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* tesla_44xx_pwrdm: Tesla processor power domain */
@@ -131,6 +163,14 @@ static struct powerdomain tesla_44xx_pwrdm = {
 		[2] = PWRSTS_ON,	/* tesla_l2 */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* wkup_44xx_pwrdm: Wake-up power domain */
@@ -164,6 +204,14 @@ static struct powerdomain cpu0_44xx_pwrdm = {
 	.pwrsts_mem_on	= {
 		[0] = PWRSTS_ON,	/* cpu0_l1 */
 	},
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* cpu1_44xx_pwrdm: MPU1 processor and Neon coprocessor power domain */
@@ -181,6 +229,14 @@ static struct powerdomain cpu1_44xx_pwrdm = {
 	.pwrsts_mem_on	= {
 		[0] = PWRSTS_ON,	/* cpu1_l1 */
 	},
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* emu_44xx_pwrdm: Emulation power domain */
@@ -218,6 +274,14 @@ static struct powerdomain mpu_44xx_pwrdm = {
 		[1] = PWRSTS_ON,	/* mpu_l2 */
 		[2] = PWRSTS_ON,	/* mpu_ram */
 	},
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* ivahd_44xx_pwrdm: IVA-HD power domain */
@@ -242,6 +306,14 @@ static struct powerdomain ivahd_44xx_pwrdm = {
 		[3] = PWRSTS_ON,	/* tcm2_mem */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* cam_44xx_pwrdm: Camera subsystem power domain */
@@ -259,6 +331,14 @@ static struct powerdomain cam_44xx_pwrdm = {
 		[0] = PWRSTS_ON,	/* cam_mem */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_CSWR] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* l3init_44xx_pwrdm: L3 initators pheripherals power domain  */
@@ -277,6 +357,14 @@ static struct powerdomain l3init_44xx_pwrdm = {
 		[0] = PWRSTS_ON,	/* l3init_bank1 */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = 1000,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /* l4per_44xx_pwrdm: Target peripherals power domain */
@@ -297,6 +385,14 @@ static struct powerdomain l4per_44xx_pwrdm = {
 		[1] = PWRSTS_ON,	/* retained_bank */
 	},
 	.flags		  = PWRDM_HAS_LOWPOWERSTATECHANGE,
+#ifdef CONFIG_OMAP_PM
+	.wakeup_lat = {
+		[PWRDM_FUNC_PWRST_OFF] = UNSUP_STATE,
+		[PWRDM_FUNC_PWRST_OSWR] = 600,
+		[PWRDM_FUNC_PWRST_CSWR] = 300,
+		[PWRDM_FUNC_PWRST_ON] = 0,
+	},
+#endif
 };
 
 /*

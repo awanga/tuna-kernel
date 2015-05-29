@@ -78,7 +78,7 @@ endif
 
 # Power Management
 obj-$(CONFIG_OMAP_PM_NOOP)		+= omap-pm-noop.o
-obj-$(CONFIG_OMAP_PM)			+= omap-pm-interface.o omap-pm-helper.o
+obj-$(CONFIG_OMAP_PM)			+= omap-pm-interface.o
 
 ifeq ($(CONFIG_PM),y)
 obj-$(CONFIG_ARCH_OMAP2)		+= pm24xx.o

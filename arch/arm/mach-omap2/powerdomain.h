@@ -19,6 +19,8 @@
 
 #include <linux/types.h>
 #include <linux/list.h>
+#include <linux/plist.h>
+#include <linux/mutex.h>
 #include <linux/spinlock.h>
 
 #include "voltage.h"
@@ -72,6 +74,16 @@
 
 /* XXX A completely arbitrary number. What is reasonable here? */
 #define PWRDM_TRANSITION_BAILOUT 100000
+
+/* Powerdomain functional power states */
+#define PWRDM_FUNC_PWRST_OFF	0x0
+#define PWRDM_FUNC_PWRST_OSWR	0x1
+#define PWRDM_FUNC_PWRST_CSWR	0x2
+#define PWRDM_FUNC_PWRST_ON	0x3
+
+#define PWRDM_MAX_FUNC_PWRSTS	4
+
+#define UNSUP_STATE -1
 
 struct clockdomain;
 struct powerdomain;
@@ -144,7 +156,22 @@ struct powerdomain {
 	s64 timer;
 	s64 state_timer[PWRDM_MAX_PWRSTS];
 #endif
+
+#ifdef CONFIG_OMAP_PM
+	const u32 wakeup_lat[PWRDM_MAX_FUNC_PWRSTS];
+	//spinlock_t wakeuplat_lock;
+	struct plist_head wakeuplat_dev_list;
+	struct mutex wakeuplat_mutex;
+#endif
 };
+
+#ifdef CONFIG_OMAP_PM
+struct wakeuplat_dev_list {
+	struct device *dev;
+	unsigned long constraint_us;
+	struct plist_node node;
+};
+#endif
 
 /**
  * struct pwrdm_ops - Arch specific function implementations
@@ -246,6 +273,15 @@ int pwrdm_post_transition(struct powerdomain *pwrdm);
 int pwrdm_get_context_loss_count(struct powerdomain *pwrdm);
 bool pwrdm_can_ever_lose_context(struct powerdomain *pwrdm);
 
+#ifdef CONFIG_OMAP_PM
+int pwrdm_wakeuplat_set_constraint(struct powerdomain *pwrdm,
+				   struct device *dev, unsigned long t);
+int pwrdm_wakeuplat_release_constraint(struct powerdomain *pwrdm,
+				       struct device *dev);
+int pwrdm_wakeuplat_update_pwrst(struct powerdomain *pwrdm);
+
+#endif
+
 extern int omap_set_pwrdm_state(struct powerdomain *pwrdm, u8 state);
 
 extern void omap242x_powerdomains_init(void);
@@ -269,5 +305,11 @@ extern struct powerdomain gfx_omap2_pwrdm;
 
 extern void pwrdm_lock(struct powerdomain *pwrdm);
 extern void pwrdm_unlock(struct powerdomain *pwrdm);
+
+int pwrdm_wakeuplat_set_constraint(struct powerdomain *pwrdm,
+				   struct device *dev, unsigned long t);
+int pwrdm_wakeuplat_release_constraint(struct powerdomain *pwrdm,
+				       struct device *dev);
+int pwrdm_wakeuplat_update_pwrst(struct powerdomain *pwrdm);
 
 #endif
