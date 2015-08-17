@@ -2333,7 +2333,7 @@ static int _shutdown(struct omap_hwmod *oh)
  * implemented to take care hierarchical dt blob parsing.
  * Return: The device node on success or NULL on failure.
  */
-static struct device_node *of_dev_hwmod_lookup(struct device_node *np,
+struct device_node *of_dev_hwmod_lookup(struct device_node *np,
 						struct omap_hwmod *oh)
 {
 	struct device_node *np0 = NULL, *np1 = NULL;

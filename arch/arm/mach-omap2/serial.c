@@ -200,6 +200,20 @@ static char *cmdline_find_option(char *str)
 	return strstr(saved_command_line, str);
 }
 
+#ifdef CONFIG_FIQ_DEBUGGER
+struct omap_hwmod *omap_uart_hwmod_lookup(int num)
+{
+        struct omap_hwmod *oh;
+        char oh_name[MAX_UART_HWMOD_NAME_LEN];
+
+        snprintf(oh_name, MAX_UART_HWMOD_NAME_LEN, "uart%d", num + 1);
+        oh = omap_hwmod_lookup(oh_name);
+        WARN(IS_ERR(oh), "Could not lookup hmwod info for %s\n",
+                                        oh_name);
+        return oh;
+}
+#endif
+
 static int __init omap_serial_early_init(void)
 {
 	do {

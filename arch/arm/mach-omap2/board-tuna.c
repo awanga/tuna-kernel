@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+#include <linux/of_platform.h>
 #include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/ion.h>
@@ -742,7 +743,7 @@ static struct omap_board_mux board_mux[] __initdata = {
 	OMAP4_MUX(CSI21_DY3, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
 	OMAP4_MUX(CSI21_DX3, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
 	OMAP4_MUX(USBB2_HSIC_STROBE, OMAP_MUX_MODE3 | OMAP_PIN_INPUT),
-	
+
 	/* fRom */
 	OMAP4_MUX(USBB2_ULPITLL_DAT4,
 		  OMAP_MUX_MODE4 | OMAP_PIN_INPUT), /* mcpsi3_somi */
@@ -758,14 +759,14 @@ static struct omap_board_mux board_mux[] __initdata = {
 						OMAP_WAKEUP_EN),
 	OMAP4_MUX(I2C1_SCL, OMAP_PIN_INPUT_PULLUP),
 	OMAP4_MUX(I2C1_SDA, OMAP_PIN_INPUT_PULLUP),
-	
+
 	/* Bluetooth */
 	OMAP4_MUX(GPMC_NCS6, OMAP_PIN_OUTPUT),	/* BT_EN - GPIO 104 */
 	OMAP4_MUX(GPMC_A18, OMAP_PIN_OUTPUT),	/* BT_nRST - GPIO 42 */
 	OMAP4_MUX(DPM_EMU16, OMAP_PIN_OUTPUT),	/* BT_WAKE - GPIO 27 */
 	OMAP4_MUX(KPD_ROW5, OMAP_WAKEUP_EN |	/* BT_HOST_WAKE  - GPIO 177 */
 						OMAP_PIN_INPUT_PULLDOWN),
-						
+
 	/* GPS */
 	OMAP4_MUX(DPM_EMU7, OMAP_PIN_OUTPUT),			/* AP_AGPS_TSYNC - GPIO 18 */
 	OMAP4_MUX(MCSPI1_SIMO, OMAP_PIN_OUTPUT),		/* GPS_nRST - GPIO 136 */
@@ -789,17 +790,17 @@ static struct omap_board_mux board_mux[] __initdata = {
 		  OMAP_PIN_INPUT_PULLUP | OMAP_PIN_OFF_WAKEUPENABLE),
 	OMAP4_MUX(GPMC_A24, OMAP_PIN_OUTPUT | OMAP_MUX_MODE3),
 	OMAP4_MUX(KPD_COL3, OMAP_PIN_OUTPUT | OMAP_MUX_MODE3),
-	
+
 	/* GPIO_127 for twl6040 */
 	OMAP4_MUX(HDQ_SIO, OMAP_MUX_MODE3 | OMAP_PIN_OUTPUT),
-	
+
 	/* McPDM */
 	OMAP4_MUX(ABE_PDM_UL_DATA, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_PDM_DL_DATA, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_PDM_FRAME, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
 	OMAP4_MUX(ABE_PDM_LB_CLK, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 	OMAP4_MUX(ABE_CLKS, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
-	
+
 	/* McBSP1 */
 	OMAP4_MUX(ABE_MCBSP1_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP4_MUX(ABE_MCBSP1_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
@@ -903,11 +904,13 @@ static struct omap_device_pad tuna_uart3_pads[] __initdata = {
 	},
 };
 
+#ifndef CONFIG_FIQ_DEBUGGER
 static struct omap_board_data tuna_uart3_bdata __initdata = {
 	.id = 2,
 	.pads = tuna_uart3_pads,
 	.pads_cnt = ARRAY_SIZE(tuna_uart3_pads),
 };
+#endif
 
 static struct omap_device_pad tuna_uart4_pads[] __initdata = {
 	{
@@ -952,13 +955,15 @@ static inline void __init board_serial_init(void)
 
 	omap_serial_init_port(&tuna_uart1_bdata, NULL);
 	omap_serial_init_port(&tuna_uart2_bdata, &tuna_uart2_info);
-#ifndef CONFIG_OMAP_FIQ_DEBUGGER
+#ifndef CONFIG_FIQ_DEBUGGER
 	omap_serial_init_port(&tuna_uart3_bdata, NULL);
 #endif
 	omap_serial_init_port(&tuna_uart4_bdata, NULL);
 }
 
-#ifdef CONFIG_OMAP_FIQ_DEBUGGER
+#ifdef CONFIG_FIQ_DEBUGGER
+extern int __init omap_serial_debug_init(int id, bool is_fiq, bool is_high_prio_irq,
+                                  struct omap_device_pad *pads, int num_pads);
 /* fiq_debugger initializes really early but OMAP resource mgmt
  * is not yet ready @ arch_init, so init the serial debugger later */
 static int __init board_serial_debug_init(void)
@@ -973,7 +978,7 @@ device_initcall(board_serial_debug_init);
 /*
  * GPS
  */
- 
+
 struct class *sec_class;
 EXPORT_SYMBOL(sec_class);
 
@@ -1449,9 +1454,36 @@ static int tuna_notifier_call(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
+static struct of_device_id omap_dt_match_table[] __initdata = {
+        { .compatible = "simple-bus", },
+        { .compatible = "ti,omap-infra", },
+        { }
+};
+
 static struct notifier_block tuna_reboot_notifier = {
 	.notifier_call = tuna_notifier_call,
 };
+
+void tuna_debug_halt(char mode, const char *cmd)
+{
+#ifdef CONFIG_DEBUG_LL
+	extern void printascii(const char *);
+
+	printascii("Debug Restart\n");
+#endif
+	/*omap44xx_restart(mode, cmd);*/
+	while (1) { barrier(); cpu_relax();; }
+}
+
+#if 0
+static int __init initcall_halt_debug(void)
+{
+	tuna_debug_halt('h', "halt");
+	return 0;
+}
+/* currently makes it THROUGH postcore, but NOT THROUGH arch */
+device_initcall_sync(initcall_halt_debug);
+#endif
 
 static void __init tuna_init(void)
 {
@@ -1462,11 +1494,10 @@ static void __init tuna_init(void)
 		package = OMAP_PACKAGE_CBL;
 	omap4_mux_init(board_mux, board_wkup_mux, package);
 
+	/* populate DTS-based OMAP infrastructure before requesting GPIOs */
+	of_platform_populate(NULL, omap_dt_match_table, NULL, NULL);
+
 	omap4_tuna_init_hw_rev();
-
-	// FIXME: handled by DTS?
-	//omap4_tuna_emif_init();
-
 	pm_power_off = tuna_power_off;
 
 	register_reboot_notifier(&tuna_reboot_notifier);
@@ -1497,6 +1528,7 @@ static void __init tuna_init(void)
 	tuna_i2c_init();
 	tuna_gsd4t_gps_init();
 	//ramconsole_pdata.bootinfo = omap4_get_resetreason();
+
 	platform_add_devices(tuna_devices, ARRAY_SIZE(tuna_devices));
 	board_serial_init();
 	omap_sdrc_init(NULL, NULL);
@@ -1508,6 +1540,7 @@ static void __init tuna_init(void)
 		spi_register_board_info(tuna_lte_modem,
 				ARRAY_SIZE(tuna_lte_modem));
 	}
+
 	tuna_from_init();
 	omap4_tuna_display_init();
 	omap4_tuna_input_init();
@@ -1518,6 +1551,7 @@ static void __init tuna_init(void)
 //	omap4_tuna_led_init();
 //	omap4_tuna_connector_init();
 //	omap4_tuna_pogo_init();
+
 #ifdef CONFIG_OMAP_HSI_DEVICE
 	if (TUNA_TYPE_MAGURO == omap4_tuna_get_type())
 		omap_hsi_init();
@@ -1580,6 +1614,11 @@ static int __init tuna_print_last_turnon_sts(void)
 }
 device_initcall(tuna_print_last_turnon_sts);
 
+static const char *tuna_boards_compat[] __initdata = {
+        "ti,tuna",
+        NULL,
+};
+
 MACHINE_START(TUNA, "Tuna")
 	/* Maintainer: Google, Inc */
 	.atag_offset	= 0x100,
@@ -1587,9 +1626,10 @@ MACHINE_START(TUNA, "Tuna")
 	.reserve	= tuna_reserve,
 	.map_io		= omap4_map_io,
 	.init_early	= omap4430_init_early,
-	.init_irq	= gic_init_irq,
+	.init_irq	= omap_gic_of_init,
 	.init_machine	= tuna_init,
 	.init_late	= omap4430_init_late,
 	.init_time	= omap4_local_timer_init,
+	.dt_compat	= tuna_boards_compat,
 	.restart	= omap44xx_restart,
 MACHINE_END

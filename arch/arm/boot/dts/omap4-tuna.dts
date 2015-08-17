@@ -8,11 +8,11 @@
 /dts-v1/;
 
 /include/ "omap4460.dtsi"
-/include/ "elpida_ecb240abacn.dtsi"
+/include/ "samsung_k3pe7e700m.dtsi"
 
 / {
 	model = "Galaxy Nexus";
-	compatible = "ti,tuna", "ti,omap4460", "ti,omap4";
+	compatible = "ti,tuna", "ti,omap4430", "ti,omap4";
 
 	memory {
 		device_type = "memory";
@@ -257,12 +257,12 @@
 
 &emif1 {
 	cs1-used;
-	device-handle = <&elpida_ECB240ABACN>;
+	device-handle = <&samsung_K3PE7E700M>;
 };
 
 &emif2 {
 	cs1-used;
-	device-handle = <&elpida_ECB240ABACN>;
+	device-handle = <&samsung_K3PE7E700M>;
 };
 
 &mcbsp3 {

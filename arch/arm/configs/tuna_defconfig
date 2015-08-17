@@ -478,8 +478,11 @@ CONFIG_ATAGS=y
 # CONFIG_DEPRECATED_PARAM_STRUCT is not set
 CONFIG_ZBOOT_ROM_TEXT=0
 CONFIG_ZBOOT_ROM_BSS=0
-# CONFIG_ARM_APPENDED_DTB is not set
-CONFIG_CMDLINE="console=ttyO1 androidboot.console=ttyO1 mem=1G vmalloc=768M omap_wdt.timer_margin=30 no_console_suspend"
+CONFIG_ARM_APPENDED_DTB=y
+CONFIG_ARM_ATAG_DTB_COMPAT=y
+# CONFIG_ARM_ATAG_DTB_COMPAT_CMDLINE_FROM_BOOTLOADER is not set
+CONFIG_ARM_ATAG_DTB_COMPAT_CMDLINE_EXTEND=y
+CONFIG_CMDLINE="console=ttyO2 androidboot.console=ttyO2 mem=1G vmalloc=768M omap_wdt.timer_margin=30 no_console_suspend initcall_debug earlyprintk panic=0 debug"
 # CONFIG_CMDLINE_FROM_BOOTLOADER is not set
 CONFIG_CMDLINE_EXTEND=y
 # CONFIG_CMDLINE_FORCE is not set
