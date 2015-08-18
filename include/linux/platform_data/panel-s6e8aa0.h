@@ -119,6 +119,8 @@ struct panel_s6e8aa0_data {
 
 	const struct s6e8aa0_elvss_parameters *elvss_table;
 	int elvss_table_size;
+
+	bool skip_init;
 };
 
 #endif

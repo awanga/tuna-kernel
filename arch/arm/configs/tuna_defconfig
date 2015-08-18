@@ -2026,6 +2026,7 @@ CONFIG_FB_OMAP2_NUM_FBS=3
 #
 # OMAP2/3 Display Device Drivers
 #
+CONFIG_PANEL_S6E8AA0=y
 # CONFIG_PANEL_TAAL is not set
 # CONFIG_PANEL_MINNOW is not set
 # CONFIG_EXYNOS_VIDEO is not set

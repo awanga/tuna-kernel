@@ -45,6 +45,8 @@ struct regulator *tuna_oled_reg_iovcc;
 
 static void tuna_oled_set_power(bool enable)
 {
+	int r;
+	
 	if (IS_ERR_OR_NULL(tuna_oled_reg)) {
 		tuna_oled_reg = regulator_get(NULL, "vlcd");
 		if (IS_ERR_OR_NULL(tuna_oled_reg)) {
@@ -63,15 +65,15 @@ static void tuna_oled_set_power(bool enable)
 		}
 
 		if (enable) {
-			regulator_enable(tuna_oled_reg_iovcc);
-			regulator_enable(tuna_oled_reg);
+			r = regulator_enable(tuna_oled_reg_iovcc);
+			r = regulator_enable(tuna_oled_reg);
 		} else {
 			regulator_disable(tuna_oled_reg);
 			regulator_disable(tuna_oled_reg_iovcc);
 		}
 	} else {
 		if (enable)
-			regulator_enable(tuna_oled_reg);
+			r = regulator_enable(tuna_oled_reg);
 		else
 			regulator_disable(tuna_oled_reg);
 	}
@@ -913,6 +915,11 @@ static struct panel_s6e8aa0_data tuna_oled_data_m3 = {
 	.acl_table = tuna_oled_acl,
 	.acl_table_size = ARRAY_SIZE(tuna_oled_acl),
 	.acl_average = 6, /* use 20 frame Y average accumulation count */
+#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
+	.skip_init = true,
+#else
+	.skip_init = false,
+#endif
 };
 
 static struct panel_s6e8aa0_data tuna_oled_data_sm2 = {
@@ -930,6 +937,11 @@ static struct panel_s6e8aa0_data tuna_oled_data_sm2 = {
 	.acl_average = 6, /* use 20 frame Y average accumulation count */
 	.elvss_table = tuna_oled_elvss,
 	.elvss_table_size = ARRAY_SIZE(tuna_oled_elvss),
+#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
+	.skip_init = true,
+#else
+	.skip_init = false,
+#endif
 };
 
 static struct panel_s6e8aa0_data tuna_oled_data_sm2a2 = {
@@ -947,61 +959,47 @@ static struct panel_s6e8aa0_data tuna_oled_data_sm2a2 = {
 	.acl_average = 6, /* use 20 frame Y average accumulation count */
 	.elvss_table = tuna_oled_elvss,
 	.elvss_table_size = ARRAY_SIZE(tuna_oled_elvss),
+#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
+	.skip_init = true,
+#else
+	.skip_init = false,
+#endif
 };
 
 static struct omap_dss_device tuna_oled_device = {
 	.name			= "lcd",
 	.driver_name		= "s6e8aa0",
 	.type			= OMAP_DISPLAY_TYPE_DSI,
-	.phy.dsi		= {
-		/*.type		= OMAP_DSS_DSI_TYPE_VIDEO_MODE,
-		.clk_lane	= 1,
-		.clk_pol	= 0,
-		.data1_lane	= 2,
-		.data1_pol	= 0,
-		.data2_lane	= 3,
-		.data2_pol	= 0,
-		.data3_lane	= 4,
-		.data3_pol	= 0,
-		.data4_lane	= 5,
-		.data4_pol	= 0,*/
+	.phy.dsi = {
+		.module		= 0,
 	},
 	.panel = {
-		/*.width_in_um	= 58000,
-		.height_in_um	= 102000,*/
+		.dsi_mode	= OMAP_DSS_DSI_VIDEO_MODE,
 	},
-#if 0
-	.clocks = {
-		.dispc		= {
-			.channel = {
-				.lck_div	= 1,	/* LCD */
-				.pck_div	= 2,	/* PCD */
-				.lcd_clk_src
-					= OMAP_DSS_CLK_SRC_DSI_PLL_HSDIV_DISPC,
-			},
-			.dispc_fclk_src = OMAP_DSS_CLK_SRC_FCK,
-		},
-		.dsi		= {
-			.regn		= 19,	/* DSI_PLL_REGN */
-			.regm		= 236,	/* DSI_PLL_REGM */
-
-			.regm_dispc	= 6,	/* PLL_CLK1 (M4) */
-			.regm_dsi	= 6,	/* PLL_CLK2 (M5) */
-			.lp_clk_div	= 8,	/* LPDIV */
-			.offset_ddr_clk	= 122,	/* DDR PRE & DDR POST
-						 * offset increase
-						 */
-
-			.dsi_fclk_src   = OMAP_DSS_CLK_SRC_DSI_PLL_HSDIV_DSI,
-		},
-	},
-#endif
 	.channel		= OMAP_DSS_CHANNEL_LCD,
-/*#ifdef CONFIG_FB_OMAP_BOOTLOADER_INIT
-	.skip_init              = true,
-#else
-	.skip_init              = false,
-#endif*/
+};
+
+static struct omap_dss_hdmi_data tuna_hdmi_data = {
+	.hpd_gpio = TUNA_GPIO_HDMI_HPD,
+};
+
+static struct omap_dss_device tuna_hdmi_device = {
+	.name = "hdmi",
+	.driver_name = "hdmi_panel",
+	.type = OMAP_DISPLAY_TYPE_HDMI,
+	.channel = OMAP_DSS_CHANNEL_DIGIT,
+	.data = &tuna_hdmi_data,
+};
+
+static struct omap_dss_device *tuna_dss_devices[] = {
+	&tuna_oled_device,
+	&tuna_hdmi_device,
+};
+
+static struct omap_dss_board_info tuna_dss_data = {
+	.num_devices	= ARRAY_SIZE(tuna_dss_devices),
+	.devices	= tuna_dss_devices,
+	.default_device	= &tuna_oled_device,
 };
 
 static void tuna_hdmi_mux_init(void)
@@ -1026,35 +1024,6 @@ static void tuna_hdmi_mux_init(void)
 	omap4_ctrl_pad_writel(r, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_I2C_1);
 
 }
-
-static struct omap_dss_device tuna_hdmi_device = {
-	.name = "hdmi",
-	.driver_name = "hdmi_panel",
-	.type = OMAP_DISPLAY_TYPE_HDMI,
-	/*.clocks	= {
-		.dispc	= {
-			.dispc_fclk_src	= OMAP_DSS_CLK_SRC_FCK,
-		},
-		.hdmi	= {
-			.regn	= 15,
-			.regm2	= 1,
-			.max_pixclk_khz = 75000,
-		},
-	},
-	.hpd_gpio = TUNA_GPIO_HDMI_HPD,*/
-	.channel = OMAP_DSS_CHANNEL_DIGIT,
-};
-
-static struct omap_dss_device *tuna_dss_devices[] = {
-	&tuna_oled_device,
-	&tuna_hdmi_device,
-};
-
-static struct omap_dss_board_info tuna_dss_data = {
-	.num_devices	= ARRAY_SIZE(tuna_dss_devices),
-	.devices	= tuna_dss_devices,
-	.default_device	= &tuna_oled_device,
-};
 
 void __init omap4_tuna_display_init(void)
 {
