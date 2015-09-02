@@ -17,6 +17,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 
+#include <linux/usb/nop-usb-xceiv.h>
 #include "usb.h"
 
 #include "board-tuna.h"
@@ -24,7 +25,22 @@
 
 #define GPIO_USB3333_RESETB     159
 
-static struct usbhs_omap_board_data usbhs_bdata = {
+/* PHY device on HS USB Port 1 i.e. nop_usb_xceiv.1 */
+static struct nop_usb_xceiv_platform_data hsusb1_phy_data = {
+	/* FREF_CLK3 provides the 19.2 MHz reference clock to the PHY */
+	.clk_rate = 19200000,
+};
+
+static struct usbhs_phy_data phy_data[] __initdata = {
+	{
+		.port = 1,
+		.reset_gpio = GPIO_USB3333_RESETB,
+		.platform_data = &hsusb1_phy_data,
+	},
+};
+
+static struct usbhs_omap_platform_data usbhs_bdata __initdata = {
+	.nports = 1,
 	.port_mode[0] = OMAP_EHCI_PORT_MODE_PHY,
 	.port_mode[1] = OMAP_USBHS_PORT_MODE_UNUSED,
 	.port_mode[2] = OMAP_USBHS_PORT_MODE_UNUSED,
@@ -54,6 +70,7 @@ void __init omap4_ehci_init(void)
 	/* FREF_CLK3 provides the 19.2 MHz reference clock to the PHY */
 	omap_mux_init_signal("fref_clk3_out", OMAP_PIN_OUTPUT | OMAP_MUX_MODE0);
 
+#if 0
 	phy_ref_clk = clk_get(NULL, "auxclk3_ck");
 	if (IS_ERR(phy_ref_clk)) {
 		pr_err("omap: ehci: Cannot request auxclk3");
@@ -69,6 +86,11 @@ void __init omap4_ehci_init(void)
 		pr_err("omap: ehci: Cannot clk_enable auxclk3 err %d", ret);
 		return;
 	}
+#endif
+
+	ret = clk_add_alias("main_clk", "nop_usb_xceiv.1", "auxclk3_ck", NULL);
+	if (ret)
+		pr_err("Failed to add main_clk alias to auxclk3_ck\n");
 
 	udelay(100);
 	gpio_set_value(GPIO_USB3333_RESETB, 1);
@@ -76,8 +98,9 @@ void __init omap4_ehci_init(void)
 	/* Everything went well with phy clock, pass it to ehci driver for
 	* low power managment now
 	*/
-	usbhs_bdata.transceiver_clk[0] = phy_ref_clk;
+	/*usbhs_bdata.transceiver_clk[0] = phy_ref_clk;*/
 
+	usbhs_init_phys(phy_data, ARRAY_SIZE(phy_data));
 	usbhs_init(&usbhs_bdata);
 
 	pr_info("usb:ehci initialized");

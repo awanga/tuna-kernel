@@ -262,8 +262,9 @@ obj-$(CONFIG_MACH_TUNA)			+= board-tuna.o \
 					   board-tuna-jack.o board-tuna-nfc.o \
 					   board-tuna-power.o board-tuna-sensors.o \
 					   board-tuna-vibrator.o board-tuna-wifi.o \
-					   board-tuna-bluetooth.o
-#					   board-tuna-connector.o board-tuna-pogo.o board-tuna-usbhost.o
+					   board-tuna-bluetooth.o board-tuna-connector.o \
+					   board-tuna-mhl.o board-tuna-usbhost.o \
+					   board-tuna-pogo.o
 
 obj-$(CONFIG_SEC_MODEM)			+= board-tuna-modems.o
 

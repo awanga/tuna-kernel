@@ -1222,6 +1222,17 @@ static int omap2_mcspi_probe(struct platform_device *pdev)
 		master->bus_num = bus_num++;
 		if (of_get_property(node, "ti,pindir-d0-out-d1-in", NULL))
 			mcspi->pin_dir = MCSPI_PINDIR_D0_OUT_D1_IN;
+#if defined(CONFIG_MACH_TUNA)
+		if (of_get_property(node, "ti,tuna-pinswap", NULL))
+		{
+			extern int omap4_tuna_get_revision(void);
+			extern int omap4_tuna_get_type(void);
+			int tuna_hw_rev = omap4_tuna_get_type() | omap4_tuna_get_revision();
+
+			if (tuna_hw_rev < 0x07)
+				mcspi->pin_dir = MCSPI_PINDIR_D0_OUT_D1_IN;
+		}
+#endif
 	} else {
 		pdata = pdev->dev.platform_data;
 		master->num_chipselect = pdata->num_cs;

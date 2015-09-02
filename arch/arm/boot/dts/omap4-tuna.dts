@@ -19,6 +19,16 @@
 		reg = <0x80000000 0x40000000>; /* 1 GB */
 	};
 
+	ocp {
+		/* Set wakeup capable UARTs */
+		uart1 {
+			wakeup-capable = <1>;
+		};
+		uart3 {
+			wakeup-capable = <1>;
+		};
+	};
+	
 	sound {
 		compatible = "ti,abe-twl6040";
 		ti,model = "SDP4430";
@@ -210,13 +220,11 @@
 	pinctrl-0 = <&i2c2_pins>;
 
 	clock-frequency = <400000>;
-};
-
-&i2c3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c3_pins>;
-
-	clock-frequency = <400000>;
+	
+	ducati@20 {
+		compatible = "ti,ducati";
+		ext-master = <1>;
+	};	
 };
 
 &i2c4 {
@@ -224,11 +232,17 @@
 	pinctrl-0 = <&i2c4_pins>;
 
 	clock-frequency = <400000>;
+	
+	an30259a@30 {
+		compatible = "led,an30259a";
+	};	
 };
 
-&mcspi1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&mcspi1_pins>;
+&mcspi3 {
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&mcspi3_pins>;*/
+	
+	ti,tuna-pinswap = <1>;
 };
 
 &mmc1 {

@@ -154,7 +154,7 @@ struct s6e8aa0_data {
 
 	atomic_t do_update;
 	int channel;
-	
+
 	bool cabc_broken;
 	unsigned cabc_mode;
 
@@ -162,7 +162,7 @@ struct s6e8aa0_data {
 
 	struct panel_s6e8aa0_data *pdata;
 	bool skip_init;
-	
+
 	unsigned int acl_cur;
 	bool acl_enable;
 	u8 acl_average;
@@ -1613,7 +1613,7 @@ static int s6e8aa0_probe(struct omap_dss_device *dssdev)
 	}
 
 	s6->skip_init = s6->pdata->skip_init;
-	
+
 	s6->acl_enable = true;
 	s6->acl_cur = 0;
 	s6->acl_average = s6->pdata->acl_average;
@@ -1630,7 +1630,7 @@ static int s6e8aa0_probe(struct omap_dss_device *dssdev)
 		dev_err(&dssdev->dev, "failed to set VC_ID\n");
 		goto err_vc_id;
 	}
-	
+
 	ret = sysfs_create_group(&s6->bldev->dev.kobj, &s6e8aa0_bl_attr_group);
 	if (ret < 0) {
 		dev_err(&dssdev->dev, "failed to add sysfs entries\n");

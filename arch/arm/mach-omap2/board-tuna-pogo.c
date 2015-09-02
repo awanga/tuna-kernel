@@ -26,8 +26,7 @@
 #include <linux/irq.h>
 #include <linux/sched.h>
 #include <linux/completion.h>
-#include <linux/usb/otg.h>
-#include <linux/usb/phy.h>
+#include <linux/usb.h>
 
 #include <asm/div64.h>
 
@@ -71,7 +70,7 @@ enum debounce_state {
 };
 
 struct tuna_pogo {
-	struct otg_id_notifier_block	otg_id_nb;
+	struct notifier_block		usb_nb;
 	struct switch_dev		audio_switch;
 	struct wake_lock		wake_lock;
 	struct completion		completion;
@@ -159,9 +158,9 @@ static void pogo_dock_change(struct tuna_pogo *pogo)
 		dock_charger_str);
 }
 
-static int pogo_detect_callback(struct otg_id_notifier_block *nb)
+static int pogo_detect_callback(struct notifier_block *nb)
 {
-	struct tuna_pogo *pogo = container_of(nb, struct tuna_pogo, otg_id_nb);
+	struct tuna_pogo *pogo = container_of(nb, struct tuna_pogo, usb_nb);
 	int dock_type_period;
 	int power_type_period;
 	int audio_cable_period;
@@ -272,9 +271,9 @@ static void pogo_dock_undock(struct tuna_pogo *pogo)
 }
 
 /* This callback is used to cancel any ownership of the chain */
-static void pogo_cancel_callback(struct otg_id_notifier_block *nb)
+static void pogo_cancel_callback(struct notifier_block *nb)
 {
-	struct tuna_pogo *pogo = container_of(nb, struct tuna_pogo, otg_id_nb);
+	struct tuna_pogo *pogo = container_of(nb, struct tuna_pogo, usb_nb);
 	unsigned long irqflags;
 
 	/* Disable the POGO_DET IRQ and cancel any pending timer if needed */
@@ -300,14 +299,27 @@ static void pogo_cancel_callback(struct otg_id_notifier_block *nb)
 	pogo_dock_undock(pogo);
 }
 
+static int pogo_callback(struct notifier_block *nb, unsigned long action, void *data)
+{
+        if (action == USB_DEVICE_ADD) {
+                if (pogo_detect_callback(nb) == OTG_ID_HANDLED)
+                        return NOTIFY_STOP;
+        }
+        else if (action == USB_DEVICE_REMOVE)
+                pogo_cancel_callback(nb);
+
+        return NOTIFY_DONE;
+}
+
 static void det_work_func(struct work_struct *work)
 {
 	struct tuna_pogo *pogo = container_of(work, struct tuna_pogo, det_work);
 
 	pogo_dock_undock(pogo);
 
-	/* Notify the otg_id chain that a change has occurred */
-	otg_id_notify();
+	/* Notify the usb notify chain that a change has occurred 
+	 * with a dummy notification (is this really kosher?) */
+	usb_notify_remove_device(NULL);
 }
 
 static void pogo_det_timer_func(unsigned long arg)
@@ -442,14 +454,9 @@ void __init omap4_tuna_pogo_init(void)
 
 	init_completion(&pogo->completion);
 
-	pogo->otg_id_nb.detect = pogo_detect_callback;
-	pogo->otg_id_nb.proxy_wait = NULL;
-	pogo->otg_id_nb.cancel = pogo_cancel_callback;
-	pogo->otg_id_nb.priority = TUNA_OTG_ID_POGO_PRIO;
-
-	ret = otg_id_register_notifier(&pogo->otg_id_nb);
-	if (ret < 0)
-		pr_err("Unable to register notifier\n");
+	pogo->usb_nb.notifier_call = pogo_callback;
+	pogo->usb_nb.priority = TUNA_OTG_ID_POGO_PRIO;
+	usb_register_notify(&pogo->usb_nb);
 
 	setup_timer(&pogo->det_timer, pogo_det_timer_func, (unsigned long)pogo);
 	spin_lock_init(&pogo->det_irq_lock);

@@ -213,39 +213,6 @@ static struct platform_device btwilink_device = {
  * USB
  */
 
-/* PHY device on HS USB Port 1 i.e. nop_usb_xceiv.1 */
-static struct nop_usb_xceiv_platform_data hsusb1_phy_data = {
-	/* FREF_CLK3 provides the 19.2 MHz reference clock to the PHY */
-	.clk_rate = 19200000,
-};
-
-static struct usbhs_phy_data phy_data[] __initdata = {
-	{
-		.port = 1,
-		//.reset_gpio = GPIO_HUB_NRESET,
-		//.vcc_gpio = GPIO_HUB_POWER,
-		.vcc_polarity = 1,
-		.platform_data = &hsusb1_phy_data,
-	},
-};
-
-static struct usbhs_omap_platform_data usbhs_bdata __initdata = {
-	.port_mode[0] = OMAP_EHCI_PORT_MODE_PHY,
-};
-
-void __init omap4_ehci_init(void)
-{
-	int ret;
-
-	/* FREF_CLK3 provides the 19.2 MHz reference clock to the PHY */
-	ret = clk_add_alias("main_clk", "nop_usb_xceiv.1", "auxclk3_ck", NULL);
-	if (ret)
-		pr_err("Failed to add main_clk alias to auxclk3_ck\n");
-
-	usbhs_init_phys(phy_data, ARRAY_SIZE(phy_data));
-	usbhs_init(&usbhs_bdata);
-}
-
 static struct omap_musb_board_data musb_board_data = {
         .interface_type         = MUSB_INTERFACE_UTMI,
 #ifdef CONFIG_USB_MUSB_OTG
@@ -278,27 +245,12 @@ static struct omap2_hsmmc_info mmc[] = {
 		.ocr_mask	= MMC_VDD_165_195 | MMC_VDD_20_21,
 		.nonremovable	= true,
 	},
-	/*{
-		.name		= "omap_wlan",
-		.mmc		= 5,
-		.caps		= MMC_CAP_4_BIT_DATA,
-		.gpio_wp	= -EINVAL,
-		.gpio_cd	= -EINVAL,
-		.ocr_mask	= MMC_VDD_165_195 | MMC_VDD_20_21,
-		.nonremovable	= false,
-	},*/
 	{}	/* Terminator */
 };
 
 static struct regulator_consumer_supply tuna_vmmc_supply[] = {
-	{
-		.supply = "vmmc",
-		.dev_name = "omap_hsmmc.0",
-	},
-	{
-		.supply = "vmmc",
-		.dev_name = "omap_hsmmc.1",
-	},
+	REGULATOR_SUPPLY("vmmc", "omap_hsmmc.0"),
+	/*REGULATOR_SUPPLY("vmmc", "omap_hsmmc.1"),*/
 };
 
 
@@ -335,9 +287,10 @@ static struct platform_device tuna_hdmi_audio_codec = {
 	.id	= -1,
 };
 
-static struct twl4030_audio_data twl6040_data = {
-	//.codec		= &twl6040_codec,
-	.audpwron_gpio	= 127,
+static struct twl4030_audio_data twl6040_audio = {
+        .audpwron_gpio  = 127,
+	//.naudint_irq	= OMAP4XXX_IRQ_SYS_2N,
+	//.irq_base	= TWL6040_CODEC_IRQ_BASE,
 };
 
 static struct twl4030_madc_platform_data twl6030_madc = {
@@ -356,9 +309,9 @@ static void tuna_audio_init(void)
 {
 	unsigned int aud_pwron;
 
-	/* twl6040 naudint
+	/* twl6040 naudint */
 	omap_mux_init_signal("sys_nirq2.sys_nirq2", \
-		OMAP_PIN_INPUT_PULLUP); */
+		OMAP_PIN_INPUT_PULLUP);
 
 	/* aud_pwron */
 	if (omap4_tuna_get_type() == TUNA_TYPE_TORO &&
@@ -367,10 +320,10 @@ static void tuna_audio_init(void)
 	else
 		aud_pwron = GPIO_AUD_PWRON;
 	omap_mux_init_gpio(aud_pwron, OMAP_PIN_OUTPUT);
-	twl6040_data.audpwron_gpio = aud_pwron;
+	twl6040_audio.audpwron_gpio = aud_pwron;
 
-	/*omap_mux_init_signal("gpmc_a24.gpio_48", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
-	omap_mux_init_signal("kpd_col3.gpio_171", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);*/
+	omap_mux_init_signal("gpmc_a24.gpio_48", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
+	omap_mux_init_signal("kpd_col3.gpio_171", OMAP_PIN_OUTPUT | OMAP_MUX_MODE3);
 }
 
 
@@ -378,7 +331,7 @@ static void tuna_audio_init(void)
  * PMIC
  */
 
-static struct regulator_init_data tuna_vaux1 = {
+ static struct regulator_init_data tuna_vaux1 = {
 	.constraints = {
 		.min_uV			= 3000000,
 		.max_uV			= 3000000,
@@ -440,7 +393,7 @@ static struct regulator_init_data tuna_vmmc = {
 					| REGULATOR_CHANGE_MODE
 					| REGULATOR_CHANGE_STATUS,
 	},
-	.num_consumer_supplies = 2,
+	.num_consumer_supplies = ARRAY_SIZE(tuna_vmmc_supply),
 	.consumer_supplies = tuna_vmmc_supply,
 };
 
@@ -494,7 +447,8 @@ static struct regulator_init_data tuna_vana = {
 
 static struct regulator_consumer_supply tuna_vcxio_supply[] = {
 	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dss"),
-	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi1"),
+	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi.0"),
+	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi.1"),
 };
 
 static struct regulator_init_data tuna_vcxio = {
@@ -508,26 +462,7 @@ static struct regulator_init_data tuna_vcxio = {
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(tuna_vcxio_supply),
 	.consumer_supplies	= tuna_vcxio_supply,
-
-};
-
-static struct regulator_consumer_supply tuna_vdac_supply[] = {
-	{
-		.supply = "hdmi_vref",
-	},
-};
-
-static struct regulator_init_data tuna_vdac = {
-	.constraints = {
-		.min_uV			= 1800000,
-		.max_uV			= 1800000,
-		.valid_modes_mask	= REGULATOR_MODE_NORMAL
-					| REGULATOR_MODE_STANDBY,
-		.valid_ops_mask	 = REGULATOR_CHANGE_MODE
-					| REGULATOR_CHANGE_STATUS,
-	},
-	.num_consumer_supplies	= ARRAY_SIZE(tuna_vdac_supply),
-	.consumer_supplies	= tuna_vdac_supply,
+	.supply_regulator	= "V2V1"
 };
 
 static struct regulator_consumer_supply tuna_vusb_supply[] = {
@@ -559,24 +494,9 @@ static struct regulator_init_data tuna_clk32kg = {
 	},
 };
 
-static struct regulator_consumer_supply tuna_clk32kaudio_supply[] = {
-	{
-		.supply = "clk32kaudio",
-	},
-	{
-		.supply = "twl6040_clk32k",
-	}
+static struct regulator_consumer_supply tuna_vdd3_supply[] = {
+	REGULATOR_SUPPLY("vcc", "l3_main.0"),
 };
-
-static struct regulator_init_data tuna_clk32kaudio = {
-	.constraints = {
-		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
-		.boot_on                = true,
-	},
-	.num_consumer_supplies  = ARRAY_SIZE(tuna_clk32kaudio_supply),
-	.consumer_supplies      = tuna_clk32kaudio_supply,
-};
-
 
 static struct regulator_init_data tuna_vdd3 = {
 	.constraints = {
@@ -586,20 +506,12 @@ static struct regulator_init_data tuna_vdd3 = {
 		},
 		.initial_state		= PM_SUSPEND_MEM,
 	},
+	.num_consumer_supplies  = ARRAY_SIZE(tuna_vdd3_supply),
+	.consumer_supplies      = tuna_vdd3_supply,
 };
 
-/*
- * VMEM is unused. Register it to regulator framework and let it
- * be in disabled state.
- */
-static struct regulator_init_data tuna_vmem = {
-	.constraints = {
-		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
-		.state_mem = {
-			.disabled	= true,
-		},
-		.initial_state		= PM_SUSPEND_MEM,
-	},
+static struct regulator_consumer_supply tuna_v2v1_supply[] = {
+	REGULATOR_SUPPLY("v2v1", "1-004b"),
 };
 
 static struct regulator_init_data tuna_v2v1 = {
@@ -612,6 +524,8 @@ static struct regulator_init_data tuna_v2v1 = {
 					| REGULATOR_CHANGE_STATUS,
 		.always_on		= true,
 	},
+	.num_consumer_supplies  = ARRAY_SIZE(tuna_v2v1_supply),
+	.consumer_supplies      = tuna_v2v1_supply,
 };
 
 static struct twl4030_platform_data tuna_twldata = {
@@ -621,7 +535,6 @@ static struct twl4030_platform_data tuna_twldata = {
 	.vusim		= &tuna_vusim,
 	.vana		= &tuna_vana,
 	.vcxio		= &tuna_vcxio,
-	.vdac		= &tuna_vdac,
 	.vusb		= &tuna_vusb,
 	.vaux1		= &tuna_vaux1,
 	.vaux2		= &tuna_vaux2,
@@ -629,12 +542,11 @@ static struct twl4030_platform_data tuna_twldata = {
 	.clk32kg	= &tuna_clk32kg,
 
 	/* children */
-	.audio		= &twl6040_data,
+	.audio		= &twl6040_audio,
 	.madc		= &twl6030_madc,
 
 	/* SMPS */
 	.vdd3		= &tuna_vdd3,
-	//.vmem		= &tuna_vmem,
 	.v2v1		= &tuna_v2v1,
 };
 
@@ -643,14 +555,14 @@ static struct twl4030_platform_data tuna_twldata = {
  * I2C
  */
 
-static struct i2c_board_info __initdata tuna_i2c1_boardinfo[] = {
+/*static struct i2c_board_info __initdata tuna_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("twl6030", 0x48),
 		.flags = I2C_CLIENT_WAKE,
 		//.irq = OMAP44XX_IRQ_SYS_1N,
 		.platform_data = &tuna_twldata,
 	},
-};
+};*/
 
 static struct i2c_board_info __initdata tuna_i2c2_boardinfo[] = {
 	{
@@ -672,7 +584,7 @@ static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
 	.udelay = 3,
 	.timeout = 0,
 };
- 
+
 static struct platform_device tuna_gpio_i2c5_device = {
 	.name = "i2c-gpio",
 	.id = 5,
@@ -691,16 +603,21 @@ static int __init tuna_i2c_init(void)
 	 */
 	regulator_has_full_constraints();
 
-	/*
-	 * Phoenix Audio IC needs I2C1 to
-	 * start with 400 KHz or less
-	 */
-	/*omap_register_i2c_bus(1, 400, tuna_i2c1_boardinfo,
-			      ARRAY_SIZE(tuna_i2c1_boardinfo));*/
+	omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
+		TWL_COMMON_REGULATOR_VDAC |
+		TWL_COMMON_REGULATOR_VAUX2 |
+		TWL_COMMON_REGULATOR_VAUX3 |
+		TWL_COMMON_REGULATOR_VMMC |
+		TWL_COMMON_REGULATOR_VPP |
+		TWL_COMMON_REGULATOR_VANA |
+		TWL_COMMON_REGULATOR_VCXIO |
+		TWL_COMMON_REGULATOR_VUSB |
+		TWL_COMMON_REGULATOR_CLK32KG |
+		TWL_COMMON_REGULATOR_V2V1);
 	omap4_pmic_init("twl6030", &tuna_twldata, NULL, 0);
 
 	omap_register_i2c_bus(2, 400, tuna_i2c2_boardinfo,
-                              ARRAY_SIZE(tuna_i2c2_boardinfo));
+				ARRAY_SIZE(tuna_i2c2_boardinfo));
 	omap_register_i2c_bus(3, 400, NULL, 0);
 
 	/* Disable internal pullup on i2c.4 line:
@@ -710,7 +627,8 @@ static int __init tuna_i2c_init(void)
 	r |= (1 << OMAP4_I2C4_SDA_PULLUPRESX_SHIFT);
 	omap4_ctrl_pad_writel(r, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_I2C_0);
 
-	omap_register_i2c_bus(4, 400, NULL, 0);
+	omap_register_i2c_bus(4, 400, tuna_i2c4_boardinfo,
+				ARRAY_SIZE(tuna_i2c4_boardinfo));
 
 	/*
 	 * Drive MSECURE high for TWL6030 write access.
@@ -721,7 +639,6 @@ static int __init tuna_i2c_init(void)
 
 	return 0;
 }
-
 
 /*
  * GPIO Mux Support
@@ -1084,7 +1001,7 @@ err:
 
 
 /*
- * Camera & Modem
+ * Camera & Modem (McSPI)
  */
 
 /* SPI flash memory in camera module */
@@ -1102,7 +1019,7 @@ static struct omap2_mcspi_device_config f_rom_mcspi_config = {
 	//.single_channel	= 1,	/* 0: slave, 1: master */
 	//.swap_datalines	= 1,
 };
- 
+
 static struct spi_board_info tuna_f_rom[] __initdata = {
  	{
 		.modalias = "m25p80",
@@ -1115,16 +1032,13 @@ static struct spi_board_info tuna_f_rom[] __initdata = {
 	}
 };
 
-static void tuna_from_init(void)
+static void __init tuna_from_init(void)
 {
 	int err;
 
-	/*if (tuna_hw_rev >= 0x07)
-		f_rom_mcspi_config.swap_datalines = 0;*/
-
-	err = spi_register_board_info(tuna_f_rom, ARRAY_SIZE(tuna_f_rom));
+	/*err = spi_register_board_info(tuna_f_rom, ARRAY_SIZE(tuna_f_rom));
 	if (err)
-		pr_err("failed to register SPI F-ROM\n");
+		pr_err("failed to register SPI F-ROM\n");*/
 }
 
 /*SPI for LTE modem bootloader*/
@@ -1328,6 +1242,7 @@ err_board_obj:
  * Low Level Bring-up Routines
  */
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
 static struct resource ramconsole_resources[] = {
 	{
 		.flags  = IORESOURCE_MEM,
@@ -1347,6 +1262,7 @@ static struct platform_device ramconsole_device = {
 		.platform_data = &ramconsole_pdata,
 	},
 };
+#endif
 
 static struct platform_device tuna_spdif_dit_device = {
 	.name		= "spdif-dit",
@@ -1354,7 +1270,9 @@ static struct platform_device tuna_spdif_dit_device = {
 };
 
 static struct platform_device *tuna_devices[] __initdata = {
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
 	&ramconsole_device,
+#endif
 	&tuna_ion_device,
 	&wl1271_device,
 	&bcm4330_bluetooth_device,
@@ -1471,24 +1389,13 @@ void tuna_debug_halt(char mode, const char *cmd)
 
 	printascii("Debug Restart\n");
 #endif
-	/*omap44xx_restart(mode, cmd);*/
-	while (1) { barrier(); cpu_relax();; }
+	omap44xx_restart(mode, cmd);
+	/*while (1) { barrier(); cpu_relax(); }*/
 }
-
-#if 0
-static int __init initcall_halt_debug(void)
-{
-	tuna_debug_halt('h', "halt");
-	return 0;
-}
-/* currently makes it THROUGH postcore, but NOT THROUGH arch */
-device_initcall_sync(initcall_halt_debug);
-#endif
 
 static void __init tuna_init(void)
 {
 	int package = OMAP_PACKAGE_CBS;
-	int ret;
 
 	if (omap_rev() == OMAP4430_REV_ES1_0)
 		package = OMAP_PACKAGE_CBL;
@@ -1546,11 +1453,10 @@ static void __init tuna_init(void)
 	omap4_tuna_input_init();
 	omap4_tuna_nfc_init();
 	omap4_tuna_power_init();
-//	omap4_tuna_jack_init();
+	omap4_tuna_jack_init();
 	omap4_tuna_sensors_init();
-//	omap4_tuna_led_init();
-//	omap4_tuna_connector_init();
-//	omap4_tuna_pogo_init();
+	omap4_tuna_connector_init();
+	omap4_tuna_pogo_init();
 
 #ifdef CONFIG_OMAP_HSI_DEVICE
 	if (TUNA_TYPE_MAGURO == omap4_tuna_get_type())
@@ -1572,7 +1478,9 @@ static void __init tuna_reserve(void)
 	int ret;
 
 	/* do the static reservations first */
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
 	memblock_remove(TUNA_RAMCONSOLE_START, TUNA_RAMCONSOLE_SIZE);
+#endif
 	memblock_remove(PHYS_ADDR_SMC_MEM, PHYS_ADDR_SMC_SIZE);
 	memblock_remove(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE);
 

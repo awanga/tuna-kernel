@@ -30,6 +30,15 @@
 #define TUNA_OTG_ID_SII9234_FAILED_PRIO	(INT_MIN + 3)
 #define TUNA_OTG_ID_FSA9480_LAST_PRIO	INT_MAX
 
+/* otg_id_notifier compatibility */
+#include <linux/usb.h>
+enum {
+        OTG_ID_HANDLED = 0,
+        OTG_ID_PROXY_WAIT,
+        OTG_ID_UNHANDLED = -1,
+};
+extern void usb_notify_remove_device(struct usb_device *udev);
+
 int omap4_tuna_get_revision(void);
 int omap4_tuna_get_type(void);
 bool omap4_tuna_final_gpios(void);

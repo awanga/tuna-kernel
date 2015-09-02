@@ -46,7 +46,7 @@ struct regulator *tuna_oled_reg_iovcc;
 static void tuna_oled_set_power(bool enable)
 {
 	int r;
-	
+
 	if (IS_ERR_OR_NULL(tuna_oled_reg)) {
 		tuna_oled_reg = regulator_get(NULL, "vlcd");
 		if (IS_ERR_OR_NULL(tuna_oled_reg)) {
