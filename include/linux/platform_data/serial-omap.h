@@ -48,6 +48,19 @@ struct omap_uart_port_info {
 
 	int (*get_context_loss_count)(struct device *);
 	void (*enable_wakeup)(struct device *, bool);
+
+#ifdef CONFIG_MACH_TUNA
+	bool (*chk_wakeup)(struct platform_device *);
+	void (*wake_peer)(struct uart_port *);
+	void __iomem *wk_st;
+	void __iomem *wk_en;
+	u32 wk_mask;
+	u16			wer;		/* Module Wakeup register */
+
+	unsigned int		errata;
+	unsigned int		console_uart;
+	unsigned		rts_mux_driver_control:1;
+#endif
 };
 
 extern void omap_uart_remove_wakeup(struct device *dev);

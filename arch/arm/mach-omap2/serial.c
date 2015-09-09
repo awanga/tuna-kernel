@@ -200,7 +200,6 @@ static char *cmdline_find_option(char *str)
 	return strstr(saved_command_line, str);
 }
 
-#ifdef CONFIG_FIQ_DEBUGGER
 struct omap_hwmod *omap_uart_hwmod_lookup(int num)
 {
         struct omap_hwmod *oh;
@@ -212,7 +211,25 @@ struct omap_hwmod *omap_uart_hwmod_lookup(int num)
                                         oh_name);
         return oh;
 }
-#endif
+
+void omap_rts_mux_write(u16 val, int num)
+{
+        struct omap_hwmod *oh;
+        int i;
+
+        oh = omap_uart_hwmod_lookup(num);
+        if (!oh)
+                return;
+
+        for (i = 0; i < oh->mux->nr_pads ; i++) {
+                if (strstr(oh->mux->pads[i].name, "rts")) {
+                        omap_mux_write(oh->mux->pads[i].partition,
+                                        val,
+                                        oh->mux->pads[i].mux[0].reg_offset);
+                        break;
+                }
+        }
+}
 
 static int __init omap_serial_early_init(void)
 {
