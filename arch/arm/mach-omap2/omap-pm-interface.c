@@ -647,6 +647,10 @@ int omap_pm_get_dev_context_loss_count(struct device *dev)
 
 	pdev = container_of(dev, struct platform_device, dev);
 	od = container_of(pdev, struct omap_device, pdev);
+
+	if (!od->hwmods_cnt)
+		goto save_ctx;
+
 	oh = od->hwmods[0];
 
 	if (!oh || !cpu_is_omap44xx())

@@ -333,7 +333,7 @@ static int __init ram_console_init(struct ram_console_buffer *buffer,
 static int __init ram_console_early_init(void)
 {
 	return ram_console_init((struct ram_console_buffer *)
-		phys_to_virt(CONFIG_ANDROID_RAM_CONSOLE_EARLY_ADDR),
+		CONFIG_ANDROID_RAM_CONSOLE_EARLY_ADDR,
 		CONFIG_ANDROID_RAM_CONSOLE_EARLY_SIZE,
 		NULL,
 		ram_console_old_log_init_buffer);

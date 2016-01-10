@@ -336,6 +336,23 @@ void __init omap_serial_init_port(struct omap_board_data *bdata,
 	omap_up.DTR_inverted = info->DTR_inverted;
 	omap_up.DTR_present = info->DTR_present;
 
+#ifdef CONFIG_MACH_TUNA
+#define UART_ERRATA_i202_MDR1_ACCESS    BIT(0)
+#define OMAP4_UART_ERRATA_i659_TX_THR   BIT(1)
+#define OMAP4_UART_WER_MOD_WKUP		0xFF
+
+	omap_up.errata |= UART_ERRATA_i202_MDR1_ACCESS;
+	//omap_up.chk_wakeup = omap_uart_chk_wakeup;
+	omap_up.wake_peer = info->wake_peer;
+	omap_up.rts_mux_driver_control = info->rts_mux_driver_control;
+
+	omap_up.wer |= OMAP4_UART_WER_MOD_WKUP; //omap_uart_idle_init(pdata, bdata->id);
+
+	if (omap_up.dma_enabled &&
+			cpu_is_omap44xx() && omap_rev() > OMAP4430_REV_ES1_0)
+		omap_up.errata |= OMAP4_UART_ERRATA_i659_TX_THR;
+#endif
+
 	pdata = &omap_up;
 	pdata_size = sizeof(struct omap_uart_port_info);
 
@@ -355,6 +372,7 @@ void __init omap_serial_init_port(struct omap_board_data *bdata,
 	oh->mux = omap_hwmod_mux_init(bdata->pads, bdata->pads_cnt);
 
 	if (console_uart_id == bdata->id) {
+		omap_up.console_uart = true;
 		omap_device_enable(pdev);
 		pm_runtime_set_active(&pdev->dev);
 	}

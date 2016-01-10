@@ -33,9 +33,9 @@
 /* otg_id_notifier compatibility */
 #include <linux/usb.h>
 enum {
-        OTG_ID_HANDLED = 0,
-        OTG_ID_PROXY_WAIT,
-        OTG_ID_UNHANDLED = -1,
+        OTG_ID_HANDLED = NOTIFY_STOP,
+        OTG_ID_PROXY_WAIT = NOTIFY_OK,
+        OTG_ID_UNHANDLED = NOTIFY_DONE,
 };
 extern void usb_notify_remove_device(struct usb_device *udev);
 

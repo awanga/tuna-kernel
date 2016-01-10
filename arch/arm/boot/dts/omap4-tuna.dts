@@ -19,16 +19,10 @@
 		reg = <0x80000000 0x40000000>; /* 1 GB */
 	};
 
-	ocp {
-		/* Set wakeup capable UARTs */
-		uart1 {
-			wakeup-capable = <1>;
-		};
-		uart3 {
-			wakeup-capable = <1>;
-		};
+        chosen {
+                bootargs = "console=ttyO2 androidboot.console=ttyO2 androidboot.hardware=tuna mem=1G vmalloc=768M omap_wdt.timer_margin=30 no_console_suspend earlyprintk debug initcall_debug";
 	};
-	
+
 	sound {
 		compatible = "ti,abe-twl6040";
 		ti,model = "SDP4430";
@@ -83,11 +77,12 @@
 	pinctrl-0 = <
 			&twl6030_pins
 			&twl6040_pins
+			&uart3_pins
 			&mcpdm_pins
 			&dmic_pins
 			&mcbsp1_pins
-			&mcbsp2_pins
 			&dss_hdmi_pins
+			&mcspi1_pins
 	>;
 
 	twl6030_pins: pinmux_twl6030_pins {
@@ -131,12 +126,11 @@
 		>;
 	};
 
-	mcbsp2_pins: pinmux_mcbsp2_pins {
+	dss_hdmi_pins: pinmux_dss_hdmi_pins {
 		pinctrl-single,pins = <
-			0xb6 0x100	/* abe_mcbsp2_clkx.abe_mcbsp2_clkx INPUT | MODE0 */
-			0xb8 0x108	/* abe_mcbsp2_dr.abe_mcbsp2_dr INPUT PULLDOWN | MODE0 */
-			0xba 0x8	/* abe_mcbsp2_dx.abe_mcbsp2_dx OUTPUT PULLDOWN | MODE0 */
-			0xbc 0x100	/* abe_mcbsp2_fsx.abe_mcbsp2_fsx INPUT | MODE0 */
+			0x5a 0x118	/* hdmi_cec.hdmi_cec INPUT PULLUP | MODE 0 */
+			0x5c 0x118	/* hdmi_scl.hdmi_scl INPUT PULLUP | MODE 0 */
+			0x5e 0x118	/* hdmi_sda.hdmi_sda INPUT PULLUP | MODE 0 */
 		>;
 	};
 
@@ -146,14 +140,6 @@
 			0xf4 0x100	/*  mcspi1_somi.mcspi1_somi INPUT | MODE0 */
 			0xf6 0x100	/*  mcspi1_simo.mcspi1_simo INPUT | MODE0 */
 			0xf8 0x100	/*  mcspi1_cs0.mcspi1_cs0 INPUT | MODE0*/
-		>;
-	};
-
-	dss_hdmi_pins: pinmux_dss_hdmi_pins {
-		pinctrl-single,pins = <
-			0x5a 0x118	/* hdmi_cec.hdmi_cec INPUT PULLUP | MODE 0 */
-			0x5c 0x118	/* hdmi_scl.hdmi_scl INPUT PULLUP | MODE 0 */
-			0x5e 0x118	/* hdmi_sda.hdmi_sda INPUT PULLUP | MODE 0 */
 		>;
 	};
 
@@ -184,6 +170,41 @@
 			0xf0 0x118     /* i2c4_sda PULLUP | INPUTENABLE | MODE0 */
 		>;
 	};
+
+	uart3_pins: pinmux_uart3_pins {
+		pinctrl-single,pins = <
+			0x106 0x110    /* uart3_rx INPUTENABLE | MODE0 */
+			0x108 0x0      /* uart3_tx OUTPUT | MODE0 */
+		>;
+	};
+};
+
+&uart1 {
+	status = "okay";
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;*/
+
+	wakeup-capable = <1>;
+};
+
+&uart2 {
+	status = "okay";
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pins>;*/
+};
+	
+&uart3 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3_pins>;
+
+	wakeup-capable = <1>;
+};
+
+&uart4 {
+	status = "okay";
+	/*pinctrl-names = "default";
+	pinctrl-0 = <&uart4_pins>;*/
 };
 
 &i2c1 {
@@ -213,8 +234,6 @@
 	};
 };
 
-/include/ "twl6030.dtsi"
-
 &i2c2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
@@ -225,6 +244,13 @@
 		compatible = "ti,ducati";
 		ext-master = <1>;
 	};	
+};
+
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+
+	clock-frequency = <100000>;
 };
 
 &i2c4 {
@@ -238,11 +264,71 @@
 	};	
 };
 
-&mcspi3 {
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&mcspi3_pins>;*/
+/include/ "twl6030.dtsi"
+
+&vaux1 {
+	regulator-min-microvolt = <3000000>;
+	regulator-always-on;
+};
+
+&vaux2 {
+	regulator-state-mem {
+		regulator-off-in-suspend;
+	};
+};
+
+&vaux3 {
+	regulator-min-microvolt = <3100000>;
+	regulator-max-microvolt = <3100000>;
+};
+
+&vmmc {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+};
+
+&vusim {
+	regulator-min-microvolt = <2200000>;
+	regulator-max-microvolt = <2200000>;
+};
+
+&vana {
+	regulator-min-microvolt = <2100000>;
+	regulator-max-microvolt = <2100000>;
+	regulator-always-on;
+};
+
+&vcxio {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+};
+
+&vusb {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+
+	regulator-state-mem {
+		regulator-off-in-suspend;
+	};
+};
+
+&mcspi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mcspi1_pins>;
 	
 	ti,tuna-pinswap = <1>;
+};
+
+&mcspi2 {
+	status = "disabled";
+};
+
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
 };
 
 &mmc1 {
@@ -251,9 +337,7 @@
 };
 
 &mmc2 {
-	vmmc-supply = <&vaux1>;
-	bus-width = <8>;
-	ti,non-removable;
+	status = "disabled";
 };
 
 &mmc3 {
@@ -277,6 +361,10 @@
 &emif2 {
 	cs1-used;
 	device-handle = <&samsung_K3PE7E700M>;
+};
+
+&mcbsp2 {
+	status = "disabled";
 };
 
 &mcbsp3 {

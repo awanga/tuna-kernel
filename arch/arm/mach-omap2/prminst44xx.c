@@ -166,6 +166,15 @@ void omap4_prminst_global_warm_sw_reset(void)
 {
 	u32 v;
 
+	/* make sure cold boot flag is cleared */
+	v = omap4_prminst_read_inst_reg(OMAP4430_PRM_PARTITION,
+				    OMAP4430_PRM_DEVICE_INST,
+				    OMAP4_PRM_RSTST_OFFSET);
+	v &= OMAP4430_GLOBAL_COLD_RST_MASK;
+	omap4_prminst_write_inst_reg(v, OMAP4430_PRM_PARTITION,
+				 OMAP4430_PRM_DEVICE_INST,
+				 OMAP4_PRM_RSTST_OFFSET);
+
 	v = omap4_prminst_read_inst_reg(OMAP4430_PRM_PARTITION,
 				    OMAP4430_PRM_DEVICE_INST,
 				    OMAP4_PRM_RSTCTRL_OFFSET);

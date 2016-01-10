@@ -93,6 +93,8 @@
 #define GPIO_GPS_PWR_EN	137
 #define GPIO_GPS_UART_SEL	164
 
+#define UART_NUM_FOR_GPS	0
+
 /* MHL I2C GPIO */
 #define GPIO_MHL_SCL_18V	99
 #define GPIO_MHL_SDA_18V	98
@@ -494,12 +496,31 @@ static struct regulator_init_data tuna_clk32kg = {
 	},
 };
 
+static struct regulator_consumer_supply tuna_clk32kaudio_supply[] = {
+	{
+		.supply = "clk32kaudio",
+	},
+	{
+		.supply = "twl6040_clk32k",
+	}
+};
+
+static struct regulator_init_data tuna_clk32kaudio = {
+	.constraints = {
+		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+		.boot_on                = true,
+	},
+	.num_consumer_supplies  = ARRAY_SIZE(tuna_clk32kaudio_supply),
+	.consumer_supplies      = tuna_clk32kaudio_supply,
+};
+
 static struct regulator_consumer_supply tuna_vdd3_supply[] = {
 	REGULATOR_SUPPLY("vcc", "l3_main.0"),
 };
 
 static struct regulator_init_data tuna_vdd3 = {
 	.constraints = {
+		.name			= "vdd_core",
 		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
 		.state_mem = {
 			.disabled	= true,
@@ -540,6 +561,7 @@ static struct twl4030_platform_data tuna_twldata = {
 	.vaux2		= &tuna_vaux2,
 	.vaux3		= &tuna_vaux3,
 	.clk32kg	= &tuna_clk32kg,
+	.clk32kaudio	= &tuna_clk32kaudio,
 
 	/* children */
 	.audio		= &twl6040_audio,
@@ -549,7 +571,6 @@ static struct twl4030_platform_data tuna_twldata = {
 	.vdd3		= &tuna_vdd3,
 	.v2v1		= &tuna_v2v1,
 };
-
 
 /*
  * I2C
@@ -601,7 +622,7 @@ static int __init tuna_i2c_init(void)
 	 * This will allow unused regulator to be shutdown. This flag
 	 * should be set in the board file. Before regulators are registered.
 	 */
-	regulator_has_full_constraints();
+	//regulator_has_full_constraints();
 
 	omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
 		TWL_COMMON_REGULATOR_VDAC |
@@ -614,6 +635,7 @@ static int __init tuna_i2c_init(void)
 		TWL_COMMON_REGULATOR_VUSB |
 		TWL_COMMON_REGULATOR_CLK32KG |
 		TWL_COMMON_REGULATOR_V2V1);
+
 	omap4_pmic_init("twl6030", &tuna_twldata, NULL, 0);
 
 	omap_register_i2c_bus(2, 400, tuna_i2c2_boardinfo,
@@ -857,7 +879,7 @@ static struct omap_uart_port_info tuna_uart2_info __initdata = {
 	.dma_rx_timeout = DEFAULT_RXDMA_TIMEOUT,
 	.autosuspend_timeout = 0,
 	//.wake_peer	= bcm_bt_lpm_exit_lpm_locked,
-	//.rts_mux_driver_control = 1,
+	.rts_mux_driver_control = 1,
 };
 
 static inline void __init board_serial_init(void)
@@ -925,9 +947,11 @@ static int uart1_rts_ctrl_write(struct file *file, const char __user *buffer,
 		return -EFAULT;
 
 	if (!strncmp(buf, "1", 1)) {
-		//omap_mux_set_gpio(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE7, "uart1_rts");
+		omap_rts_mux_write(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE7,
+							UART_NUM_FOR_GPS);
 	} else if (!strncmp(buf, "0", 1)) {
-		//omap_mux_set_gpio(OMAP_PIN_OUTPUT | OMAP_MUX_MODE1, "uart1_rts");
+		omap_rts_mux_write(OMAP_PIN_OUTPUT | OMAP_MUX_MODE1,
+							UART_NUM_FOR_GPS);
 	}
 
 	return count;
@@ -950,7 +974,6 @@ static int __init tuna_gps_rts_ctrl_init(void)
 	return 0;
 }
 
-#if 0
 static void tuna_gsd4t_gps_gpio(void)
 {
 	/* AP_AGPS_TSYNC - GPIO 18 */
@@ -962,7 +985,6 @@ static void tuna_gsd4t_gps_gpio(void)
 	/* GPS_UART_SEL - GPIO 164 */
 	omap_mux_init_signal("usbb2_ulpitll_dat3.gpio_164", OMAP_PIN_OUTPUT);
 }
-#endif
 
 static void tuna_gsd4t_gps_init(void)
 {
@@ -973,7 +995,7 @@ static void tuna_gsd4t_gps_init(void)
 		pr_err("Failed to create device(gps)!\n");
 		goto err;
 	}
-	//tuna_gsd4t_gps_gpio();
+	tuna_gsd4t_gps_gpio();
 
 	gpio_request(GPIO_AP_AGPS_TSYNC, "AP_AGPS_TSYNC");
 	gpio_direction_output(GPIO_AP_AGPS_TSYNC, 0);
@@ -1069,7 +1091,7 @@ static struct spi_board_info tuna_lte_modem[] __initdata = {
 };
 
 
-/* 
+/*
  * Miscellaneous Routines
  */
 
@@ -1382,16 +1404,17 @@ static struct notifier_block tuna_reboot_notifier = {
 	.notifier_call = tuna_notifier_call,
 };
 
-void tuna_debug_halt(char mode, const char *cmd)
+int tuna_debug_halt(void)
 {
 #ifdef CONFIG_DEBUG_LL
 	extern void printascii(const char *);
 
 	printascii("Debug Restart\n");
 #endif
-	omap44xx_restart(mode, cmd);
-	/*while (1) { barrier(); cpu_relax(); }*/
+	omap44xx_restart('r', NULL);
+	//while (1) { asm volatile ("wfe"); cpu_relax(); }
 }
+/*fs_initcall_sync(tuna_debug_halt);*/
 
 static void __init tuna_init(void)
 {

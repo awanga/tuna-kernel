@@ -153,7 +153,6 @@ struct s6e8aa0_data {
 	unsigned long hw_guard_wait;	/* max guard time in jiffies */
 
 	atomic_t do_update;
-	int channel;
 
 	bool cabc_broken;
 	unsigned cabc_mode;
@@ -1619,18 +1618,6 @@ static int s6e8aa0_probe(struct omap_dss_device *dssdev)
 	s6->acl_average = s6->pdata->acl_average;
 	s6->elvss_cur_i = ~0;
 
-	ret = omap_dsi_request_vc(dssdev, &s6->channel);
-	if (ret) {
-		dev_err(&dssdev->dev, "failed to get virtual channel\n");
-		goto err_req_vc;
-	}
-
-	ret = omap_dsi_set_vc_id(dssdev, s6->channel, CMD_VC_CHANNEL);
-	if (ret) {
-		dev_err(&dssdev->dev, "failed to set VC_ID\n");
-		goto err_vc_id;
-	}
-
 	ret = sysfs_create_group(&s6->bldev->dev.kobj, &s6e8aa0_bl_attr_group);
 	if (ret < 0) {
 		dev_err(&dssdev->dev, "failed to add sysfs entries\n");
@@ -1640,11 +1627,6 @@ static int s6e8aa0_probe(struct omap_dss_device *dssdev)
 	dev_dbg(&dssdev->dev, "s6e8aa0_probe\n");
 	return ret;
 
-err_vc_id:
-	omap_dsi_release_vc(dssdev, s6->channel);
-err_req_vc:
-	if (s6->bldev != NULL)
-		backlight_device_unregister(s6->bldev);
 err_backlight_device_register:
 	mutex_destroy(&s6->lock);
 	gpio_free(s6->pdata->reset_gpio);
@@ -1821,41 +1803,6 @@ static void s6e8aa0_framedone_cb(int err, void *data)
 	dsi_bus_unlock(dssdev);
 }
 
-static int s6e8aa0_set_update_window(struct s6e8aa0_data *s6,
-		u16 x, u16 y, u16 w, u16 h)
-{
-	int r;
-	u16 x1 = x;
-	u16 x2 = x + w - 1;
-	u16 y1 = y;
-	u16 y2 = y + h - 1;
-
-	u8 buf[5];
-	buf[0] = MIPI_DCS_SET_COLUMN_ADDRESS;
-	buf[1] = (x1 >> 8) & 0xff;
-	buf[2] = (x1 >> 0) & 0xff;
-	buf[3] = (x2 >> 8) & 0xff;
-	buf[4] = (x2 >> 0) & 0xff;
-
-	r = dsi_vc_dcs_write_nosync(s6->dssdev, s6->channel, buf, sizeof(buf));
-	if (r)
-		return r;
-
-	buf[0] = MIPI_DCS_SET_PAGE_ADDRESS;
-	buf[1] = (y1 >> 8) & 0xff;
-	buf[2] = (y1 >> 0) & 0xff;
-	buf[3] = (y2 >> 8) & 0xff;
-	buf[4] = (y2 >> 0) & 0xff;
-
-	r = dsi_vc_dcs_write_nosync(s6->dssdev, s6->channel, buf, sizeof(buf));
-	if (r)
-		return r;
-
-	dsi_vc_send_bta_sync(s6->dssdev, s6->channel);
-
-	return r;
-}
-
 static int s6e8aa0_update(struct omap_dss_device *dssdev,
 		      u16 x, u16 y, u16 w, u16 h)
 {
@@ -1871,12 +1818,6 @@ static int s6e8aa0_update(struct omap_dss_device *dssdev,
 		r = 0;
 		goto err;
 	}
-
-	r = s6e8aa0_set_update_window(s6, 0, 0,
-			dssdev->panel.timings.x_res,
-			dssdev->panel.timings.y_res);
-	if (r)
-		goto err;
 
 	/* We use VC(0) for VideoPort Data and VC(1) for commands */
 	r = omap_dsi_update(dssdev, 0, s6e8aa0_framedone_cb, dssdev);
@@ -1899,51 +1840,12 @@ static int s6e8aa0_sync(struct omap_dss_device *dssdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int s6e8aa0_resume(struct omap_dss_device *dssdev)
-{
-	struct s6e8aa0_data *s6 = dev_get_drvdata(&dssdev->dev);
-	int ret;
-
-	dev_dbg(&dssdev->dev, "resume\n");
-
-	mutex_lock(&s6->lock);
-	ret = s6e8aa0_start(dssdev);
-	mutex_unlock(&s6->lock);
-	return ret;
-}
-
-static int s6e8aa0_suspend(struct omap_dss_device *dssdev)
-{
-	struct s6e8aa0_data *s6 = dev_get_drvdata(&dssdev->dev);
-	int ret = 0;
-
-	dev_dbg(&dssdev->dev, "suspend\n");
-
-	mutex_lock(&s6->lock);
-	if (dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	s6e8aa0_stop(dssdev);
-	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
-out:
-	mutex_unlock(&s6->lock);
-	return ret;
-}
-#endif
-
 static struct omap_dss_driver s6e8aa0_driver = {
 	.probe = s6e8aa0_probe,
 	.remove = __exit_p(s6e8aa0_remove),
 
 	.enable = s6e8aa0_enable,
 	.disable = s6e8aa0_disable,
-#ifdef CONFIG_PM
-	.suspend = s6e8aa0_suspend,
-	.resume = s6e8aa0_resume,
-#endif
 
 	.update = s6e8aa0_update,
 	.sync = s6e8aa0_sync,
