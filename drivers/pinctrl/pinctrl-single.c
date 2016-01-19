@@ -1500,7 +1500,7 @@ static int __init pcs_init(void)
 {
 	return platform_driver_register(&pcs_driver);
 }
-subsys_initcall_sync(pcs_init);
+arch_initcall_sync(pcs_init);
 
 static void __exit pcs_exit(void)
 {

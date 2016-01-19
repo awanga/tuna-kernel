@@ -82,7 +82,6 @@
 			&dmic_pins
 			&mcbsp1_pins
 			&dss_hdmi_pins
-			&mcspi1_pins
 	>;
 
 	twl6030_pins: pinmux_twl6030_pins {
