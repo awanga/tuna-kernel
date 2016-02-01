@@ -179,16 +179,11 @@
 
 &uart1 {
 	status = "okay";
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&uart1_pins>;*/
-
 	wakeup-capable = <1>;
 };
 
 &uart2 {
 	status = "okay";
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&uart2_pins>;*/
 };
 	
 &uart3 {
@@ -201,8 +196,6 @@
 
 &uart4 {
 	status = "okay";
-	/*pinctrl-names = "default";
-	pinctrl-0 = <&uart4_pins>;*/
 };
 
 &i2c1 {
@@ -274,6 +267,9 @@
 	#size-cells = <0>;
 };
 
+&ssi {
+	status = "ok";
+};
 
 /include/ "twl6030.dtsi"
 
