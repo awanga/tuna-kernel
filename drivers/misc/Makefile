@@ -69,3 +69,4 @@ obj-$(CONFIG_BQ5105X_CTRL)      += bq5105x_ctrl.o
 obj-$(CONFIG_BQ5105X_DETECT)    += bq5105x_detect.o
 obj-$(CONFIG_WAKEUP_SOURCE_NOTIFY)	+= wakeup_source_notify.o
 obj-$(CONFIG_WAKEUP_SOURCE_NOTIFY)	+= als_notify.o
+obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
