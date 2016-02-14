@@ -599,7 +599,7 @@ static struct i2c_board_info __initdata tuna_i2c4_boardinfo[] = {
 	},
 };
 
-static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
+/*static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
 	.sda_pin = GPIO_MHL_SDA_18V,
 	.scl_pin = GPIO_MHL_SCL_18V,
 	.udelay = 3,
@@ -612,7 +612,7 @@ static struct platform_device tuna_gpio_i2c5_device = {
 	.dev = {
 		.platform_data = &tuna_gpio_i2c5_pdata,
 	}
-};
+};*/
 
 static int __init tuna_i2c_init(void)
 {
@@ -622,9 +622,9 @@ static int __init tuna_i2c_init(void)
 	 * This will allow unused regulator to be shutdown. This flag
 	 * should be set in the board file. Before regulators are registered.
 	 */
-	//regulator_has_full_constraints();
+	/*regulator_has_full_constraints();*/
 
-	omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
+	/*omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
 		TWL_COMMON_REGULATOR_VDAC |
 		TWL_COMMON_REGULATOR_VAUX2 |
 		TWL_COMMON_REGULATOR_VAUX3 |
@@ -640,7 +640,8 @@ static int __init tuna_i2c_init(void)
 
 	omap_register_i2c_bus(2, 400, tuna_i2c2_boardinfo,
 				ARRAY_SIZE(tuna_i2c2_boardinfo));
-	omap_register_i2c_bus(3, 400, NULL, 0);
+	omap_register_i2c_bus(3, 400, NULL, 0);*/
+
 
 	/* Disable internal pullup on i2c.4 line:
 	 * as external 2.2K is already present
@@ -649,8 +650,8 @@ static int __init tuna_i2c_init(void)
 	r |= (1 << OMAP4_I2C4_SDA_PULLUPRESX_SHIFT);
 	omap4_ctrl_pad_writel(r, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_I2C_0);
 
-	omap_register_i2c_bus(4, 400, tuna_i2c4_boardinfo,
-				ARRAY_SIZE(tuna_i2c4_boardinfo));
+	/*omap_register_i2c_bus(4, 400, tuna_i2c4_boardinfo,
+				ARRAY_SIZE(tuna_i2c4_boardinfo));*/
 
 	/*
 	 * Drive MSECURE high for TWL6030 write access.
@@ -1030,7 +1031,7 @@ err:
 #define F_ROM_SPI_BUS_NUM	3
 #define F_ROM_SPI_CS		0
 #define F_ROM_SPI_SPEED_HZ	24000000
- 
+
 static const struct flash_platform_data w25q80_pdata = {
 	.name = "w25q80",
 	.type = "w25q80",
@@ -1058,9 +1059,9 @@ static void __init tuna_from_init(void)
 {
 	int err;
 
-	/*err = spi_register_board_info(tuna_f_rom, ARRAY_SIZE(tuna_f_rom));
+	err = spi_register_board_info(tuna_f_rom, ARRAY_SIZE(tuna_f_rom));
 	if (err)
-		pr_err("failed to register SPI F-ROM\n");*/
+		pr_err("failed to register SPI F-ROM\n");
 }
 
 /*SPI for LTE modem bootloader*/
@@ -1302,7 +1303,7 @@ static struct platform_device *tuna_devices[] __initdata = {
 	&tuna_abe_audio,
 	&tuna_hdmi_audio_codec,
 	&btwilink_device,
-	&tuna_gpio_i2c5_device,
+	/*&tuna_gpio_i2c5_device,*/
 	&tuna_spdif_dit_device,
 };
 
@@ -1411,8 +1412,10 @@ int tuna_debug_halt(void)
 
 	printascii("Debug Restart\n");
 #endif
+	dump_stack();
 	omap44xx_restart('r', NULL);
 	//while (1) { asm volatile ("wfe"); cpu_relax(); }
+	return 0;
 }
 /*fs_initcall_sync(tuna_debug_halt);*/
 
@@ -1497,8 +1500,8 @@ static void __init tuna_init(void)
 
 static void __init tuna_reserve(void)
 {
-	int i;
-	int ret;
+	/*int i;
+	int ret;*/
 
 	/* do the static reservations first */
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
