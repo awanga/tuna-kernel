@@ -973,9 +973,6 @@ static struct omap_dss_device tuna_oled_device = {
 	.phy.dsi = {
 		.module		= 0,
 	},
-	.panel = {
-		.dsi_mode	= OMAP_DSS_DSI_VIDEO_MODE,
-	},
 	.channel		= OMAP_DSS_CHANNEL_LCD,
 };
 

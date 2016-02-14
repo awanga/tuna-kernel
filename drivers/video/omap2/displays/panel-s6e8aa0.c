@@ -1673,7 +1673,17 @@ static int s6e8aa0_power_on(struct omap_dss_device *dssdev)
 	struct s6e8aa0_data *s6 = dev_get_drvdata(&dssdev->dev);
 	int r = 0;
 
-	dsi_bus_lock(dssdev);
+	struct omap_dss_dsi_config dsi_config = {
+		.mode = OMAP_DSS_DSI_VIDEO_MODE,
+		.pixel_format = OMAP_DSS_DSI_FMT_RGB888,
+		.timings = &dssdev->panel.timings,
+	};
+
+	r = omapdss_dsi_set_config(dssdev, &dsi_config);
+	if (r) {
+		dev_err(&dssdev->dev, "failed to configure DSI\n");
+		goto err0;
+	}
 
 	/* At power on the first vsync has not been received yet*/
 	/*dssdev->first_vsync = false;*/
@@ -1686,7 +1696,7 @@ static int s6e8aa0_power_on(struct omap_dss_device *dssdev)
 		if (r) {
 			dev_err(&dssdev->dev, "failed to enable DSI\n");
 			dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
-			goto err;
+			goto err0;
 		}
 
 		/* reset s6e8aa0 bridge */
@@ -1700,7 +1710,9 @@ static int s6e8aa0_power_on(struct omap_dss_device *dssdev)
 
 			s6e8aa0_config(dssdev);
 
-			dsi_enable_video_output(dssdev, s6->channel0);
+			r = dsi_enable_video_output(dssdev, s6->channel0);
+			if (r) goto err;
+
 			// HASH: TODO dsi_video_mode_enable(dssdev, 0x3E); /* DSI_DT_PXLSTREAM_24BPP_PACKED; */
 		}
 
@@ -1711,7 +1723,8 @@ static int s6e8aa0_power_on(struct omap_dss_device *dssdev)
 		s6->skip_init = false;
 
 err:
-	dsi_bus_unlock(dssdev);
+	omapdss_dsi_display_disable(dssdev, true, false);
+err0:
 	return r;
 }
 
@@ -1761,13 +1774,15 @@ static int s6e8aa0_enable(struct omap_dss_device *dssdev)
 		goto out;
 	}
 
+	dsi_bus_lock(dssdev);
 	ret = s6e8aa0_power_on(dssdev);
+	dsi_bus_unlock(dssdev);
 	if (ret) {
 		dev_dbg(&dssdev->dev, "enable failed\n");
 		dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
-	} else {
-		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
 	}
+
+	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
 
 	/* fixup pclk based on pll config */
 	pclk = dispc_mgr_pclk_rate(dssdev->channel);
@@ -1839,11 +1854,10 @@ static int s6e8aa0_resume(struct omap_dss_device *dssdev)
 	}
 
 	ret = s6e8aa0_power_on(dssdev);
-	if (ret) {
+	if (ret)
 		dev_dbg(&dssdev->dev, "resume failed\n");
-	} else {
-		dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
-	}
+
+	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
 
 	/* fixup pclk based on pll config */
 	pclk = dispc_mgr_pclk_rate(dssdev->channel);
