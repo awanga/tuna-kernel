@@ -1083,6 +1083,7 @@ static const struct of_device_id twl_of_match[] = {
 	TWL6030_OF_MATCH("ti,twl6030-vmmc", VMMC),
 	TWL6030_OF_MATCH("ti,twl6030-vpp", VPP),
 	TWL6030_OF_MATCH("ti,twl6030-vusim", VUSIM),
+	TWL6030_OF_MATCH("ti,twl6030-clk32kaudio", CLK32KAUDIO),
 	TWL6025_OF_MATCH("ti,twl6025-ldo2", LDO2),
 	TWL6025_OF_MATCH("ti,twl6025-ldo4", LDO4),
 	TWL6025_OF_MATCH("ti,twl6025-ldo3", LDO3),

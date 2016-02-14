@@ -259,7 +259,7 @@ static int bcm4330_bluetooth_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	clk32kaudio_reg = regulator_get(0, "clk32kaudio");
+	clk32kaudio_reg = regulator_get(0, "CLK32KAUDIO");
 	if (IS_ERR(clk32kaudio_reg)) {
 		pr_err("clk32kaudio reg not found!\n");
 		clk32kaudio_reg = NULL;
