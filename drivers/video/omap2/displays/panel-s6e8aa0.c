@@ -1673,10 +1673,27 @@ static int s6e8aa0_power_on(struct omap_dss_device *dssdev)
 	struct s6e8aa0_data *s6 = dev_get_drvdata(&dssdev->dev);
 	int r = 0;
 
+	struct omap_dsi_pin_config pin_config = {
+		.num_pins = 10,
+		.pins = {
+			0, 1, /* clk */
+			2, 3, /* data1 */
+			4, 5, /* data2 */
+			6, 7, /* data3 */
+			8, 9, /* data4 */
+		},
+	};
+
 	struct omap_dss_dsi_config dsi_config = {
 		.mode = OMAP_DSS_DSI_VIDEO_MODE,
 		.pixel_format = OMAP_DSS_DSI_FMT_RGB888,
 		.timings = &dssdev->panel.timings,
+	};
+
+	r = omapdss_dsi_configure_pins(dssdev, &pin_config);
+	if (r) {
+		dev_err(&dssdev->dev, "failed to configure DSI pins\n");
+		goto err0;
 	};
 
 	r = omapdss_dsi_set_config(dssdev, &dsi_config);
