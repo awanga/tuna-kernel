@@ -5288,6 +5288,30 @@ void usb_queue_reset_device(struct usb_interface *iface)
 }
 EXPORT_SYMBOL_GPL(usb_queue_reset_device);
 
+
+/* Note that hdev or one of its children must be locked! */
+static struct usb_hub *hdev_to_hub(struct usb_device *hdev)
+{
+	if (!hdev || !hdev->actconfig)
+		return NULL;
+	return usb_get_intfdata(hdev->actconfig->interface[0]);
+}
+
+void usb_force_disconnect(struct usb_device *udev)
+{
+	struct usb_hub	*parent_hub;
+	int		port1 = udev->portnum;
+
+	if (!udev->parent)
+		return;
+
+	parent_hub = hdev_to_hub(udev->parent);
+	if (!parent_hub)
+		return;
+
+	hub_port_logical_disconnect(parent_hub, port1);
+}
+
 /**
  * usb_hub_find_child - Get the pointer of child device
  * attached to the port which is specified by @port1.

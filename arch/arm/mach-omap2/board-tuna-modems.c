@@ -19,11 +19,16 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-
-#include <mach/omap4-common.h>
 #include <linux/platform_data/modem.h>
+#include <asm/io.h>
+
 #include "board-tuna.h"
+#include "omap44xx.h"
+#include "iomap.h"
 #include "mux.h"
+
+#define OMAP4_GPMC_IO_OFFSET		0xa9000000
+#define OMAP4_GPMC_IO_ADDRESS(pa)	IOMEM((pa) + OMAP4_GPMC_IO_OFFSET)
 
 #define OMAP_GPIO_MIPI_HSI_CP_ON	53
 #define OMAP_GPIO_MIPI_HSI_RESET_REQ_N	50
@@ -221,7 +226,7 @@ static void umts_modem_cfg_gpio(void)
 
 	if (gpio_phone_active)
 		irq_set_irq_type(
-			OMAP_GPIO_IRQ(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
+			gpio_to_irq(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
 						     IRQ_TYPE_LEVEL_HIGH);
 
 	pr_debug("umts_modem_cfg_gpio done\n");
@@ -231,8 +236,6 @@ static void umts_modem_cfg_gpio(void)
 static struct resource umts_modem_res[] = {
 	[0] = {
 		.name = "umts_phone_active",
-		.start = OMAP_GPIO_IRQ(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
-		.end = OMAP_GPIO_IRQ(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -384,7 +387,7 @@ static void dpram_cfg_gpio(void)
 
 	gpio_request(OMAP_GPIO_DPRAM_INT_N, "dpram_int");
 	gpio_direction_input(OMAP_GPIO_DPRAM_INT_N);
-	irq_set_irq_type(OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_INT_N),
+	irq_set_irq_type(gpio_to_irq(OMAP_GPIO_DPRAM_INT_N),
 				IRQ_TYPE_LEVEL_LOW);
 
 	/*dpram platform init setting*/
@@ -484,21 +487,17 @@ static void cdma_modem_cfg_gpio(void)
 
 	if (gpio_phone_active)
 		irq_set_irq_type(
-			OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_PHONE_ACTIVE),
+			gpio_to_irq(OMAP_GPIO_DPRAM_PHONE_ACTIVE),
 						     IRQ_TYPE_LEVEL_HIGH);
 }
 
 static struct resource cdma_modem_res[] = {
 	[0] = {
 		.name = "cdma_phone_active",
-		.start = OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_PHONE_ACTIVE),
-		.end = OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_PHONE_ACTIVE),
 		.flags = IORESOURCE_IRQ,
 	},
 	[1] = {
 		.name = "cdma_dpram_int",
-		.start = OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_INT_N),
-		.end = OMAP_GPIO_IRQ(OMAP_GPIO_DPRAM_INT_N),
 		.flags = IORESOURCE_IRQ,
 	},
 	[2] = {
@@ -695,15 +694,11 @@ static struct resource lte_modem_res[] = {
 	[0] = {
 		.name = "lte_phone_active",
 		/* phone active irq */
-		.start = OMAP_GPIO_IRQ(OMAP_GPIO_LTE_ACTIVE),
-		.end = OMAP_GPIO_IRQ(OMAP_GPIO_LTE_ACTIVE),
 		.flags = IORESOURCE_IRQ,
 	},
 	[1] = {
 		.name = "lte_host_wakeup",
 		/* host wakeup irq */
-		.start = OMAP_GPIO_IRQ(OMAP_GPIO_CMC2AP_INT2),
-		.end = OMAP_GPIO_IRQ(OMAP_GPIO_CMC2AP_INT2),
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -736,15 +731,28 @@ static int __init init_modem(void)
 
 	switch (omap4_tuna_get_type()) {
 	case TUNA_TYPE_MAGURO:	/* HSPA */
+		umts_modem_res[0].start = gpio_to_irq(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
+		umts_modem_res[0].end = gpio_to_irq(OMAP_GPIO_MIPI_HSI_PHONE_ACTIVE),
+
 		/* umts gpios configuration */
 		umts_modem_cfg_gpio();
 		platform_device_register(&umts_modem);
 		break;
 
 	case TUNA_TYPE_TORO:	/* LTE */
+		cdma_modem_res[0].start = gpio_to_irq(OMAP_GPIO_DPRAM_PHONE_ACTIVE);
+		cdma_modem_res[0].end = gpio_to_irq(OMAP_GPIO_DPRAM_PHONE_ACTIVE);
+		cdma_modem_res[1].start = gpio_to_irq(OMAP_GPIO_DPRAM_INT_N);
+		cdma_modem_res[1].end = gpio_to_irq(OMAP_GPIO_DPRAM_INT_N);
+
 		/* cdma gpios configuration */
 		cdma_modem_cfg_gpio();
 		platform_device_register(&cdma_modem);
+
+		lte_modem_res[0].start = gpio_to_irq(OMAP_GPIO_LTE_ACTIVE);
+		lte_modem_res[0].end = gpio_to_irq(OMAP_GPIO_LTE_ACTIVE);
+		lte_modem_res[1].start = gpio_to_irq(OMAP_GPIO_CMC2AP_INT2);
+		lte_modem_res[1].end = gpio_to_irq(OMAP_GPIO_CMC2AP_INT2);
 
 		/* lte gpios configuration */
 		lte_modem_cfg_gpio();

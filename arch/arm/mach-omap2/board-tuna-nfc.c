@@ -23,6 +23,7 @@
 #include <linux/interrupt.h>
 #include <linux/wakelock.h>
 #include <linux/stat.h>
+#include <linux/ti_wilink_st.h>
 
 #include <mach/serial.h>
 #include "mux.h"
@@ -35,7 +36,7 @@
 #define PWR_ON		1
 #define PWR_ON_FW	2
 
-#define NFC_UART_NUM	3
+#define NFC_UART_NUM	2 /* UART3 */
 
 static unsigned int nfc_power;
 static struct wake_lock nfc_wake_lock;
@@ -94,7 +95,7 @@ static DEVICE_ATTR(nfc_power, S_IWUSR | S_IRUGO, nfc_power_show,
 
 static irqreturn_t nfc_irq_isr(int irq, void *dev)
 {
-	omap_serial_wake(NFC_UART_NUM);
+	omap_serial_wakeup_event(NFC_UART_NUM);
 
 	/*
 	 * take a 500ms wakelock, to give time for higher layers

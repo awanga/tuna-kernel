@@ -1096,9 +1096,7 @@ static struct spi_board_info tuna_lte_modem[] __initdata = {
  * Miscellaneous Routines
  */
 
-static struct ion_platform_data tuna_ion_data = {
-	.nr = 3,
-	.heaps = {
+static struct ion_platform_heap tuna_ion_heaps[] = {
 		{
 			.type = ION_HEAP_TYPE_CARVEOUT,
 			.id   = OMAP_ION_HEAP_SECURE_INPUT,
@@ -1122,7 +1120,11 @@ static struct ion_platform_data tuna_ion_data = {
 					OMAP_TUNA_ION_HEAP_NONSECURE_TILER_SIZE,
 			.size = OMAP_TUNA_ION_HEAP_NONSECURE_TILER_SIZE,
 		},
-	},
+};
+
+static struct ion_platform_data tuna_ion_data = {
+	.nr = ARRAY_SIZE(tuna_ion_heaps),
+	.heaps = tuna_ion_heaps,
 };
 
 static struct platform_device tuna_ion_device = {

@@ -32,9 +32,12 @@
 #include <asm/mach-types.h>
 
 #include <linux/regulator/driver.h>
+#include <linux/ti_wilink_st.h>
 
 #include "serial.h"
 #include "board-tuna-bluetooth.h"
+
+#define BT_UART	0 /* UART1 */
 
 #define BT_REG_GPIO 103
 #define BT_RESET_GPIO 42
@@ -64,10 +67,12 @@ struct bcm_bt_lpm {
 
 static int bcm4330_bt_rfkill_set_power(void *data, bool blocked)
 {
+	int r = 0;
+
 	// rfkill_ops callback. Turn transmitter on when blocked is false
 	if (!blocked) {
 		if (clk32kaudio_reg && !bt_enabled)
-			regulator_enable(clk32kaudio_reg);
+			r = regulator_enable(clk32kaudio_reg);
 
 		gpio_set_value(BT_REG_GPIO, 1);
 		gpio_set_value(BT_RESET_GPIO, 1);
@@ -76,12 +81,12 @@ static int bcm4330_bt_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(BT_RESET_GPIO, 0);
 		gpio_set_value(BT_REG_GPIO, 0);
 		if (clk32kaudio_reg && bt_enabled)
-			regulator_disable(clk32kaudio_reg);
+			r = regulator_disable(clk32kaudio_reg);
 	}
 
 	bt_enabled = !blocked;
 
-	return 0;
+	return r;
 }
 
 static const struct rfkill_ops bcm4330_bt_rfkill_ops = {
@@ -96,12 +101,12 @@ static void set_wake_locked(int wake)
 		wake_unlock(&bt_lpm.wake_lock);
 
 	if (!wake_uart_enabled && wake)
-		omap_serial_enable(1);
+		omap_serial_runtime_get(BT_UART);
 
 	gpio_set_value(BT_WAKE_GPIO, wake);
 
 	if (wake_uart_enabled && !wake)
-		omap_serial_disable(1);
+		omap_serial_runtime_put(BT_UART);
 
 	wake_uart_enabled = wake;
 }
@@ -137,10 +142,10 @@ static void update_host_wake_locked(int host_wake)
 	if (host_wake) {
 		wake_lock(&bt_lpm.wake_lock);
 		if (!host_wake_uart_enabled)
-			omap_serial_enable(1);
+			omap_serial_runtime_get(BT_UART);
 	} else  {
 		if (host_wake_uart_enabled)
-			omap_serial_disable(1);
+			omap_serial_runtime_put(BT_UART);
 		// Take a timed wakelock, so that upper layers can take it.
 		// The chipset deasserts the hostwake lock, when there is no
 		// more data to send.

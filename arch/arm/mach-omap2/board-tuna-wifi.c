@@ -131,7 +131,7 @@ static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 static struct regulator *clk32kaudio_reg;
 
-static int tuna_wifi_status_register(
+/*static int tuna_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 		void *dev_id)
 {
@@ -147,7 +147,7 @@ static unsigned int tuna_wifi_status(struct device *dev)
 	return tuna_wifi_cd;
 }
 
-/*struct mmc_platform_data tuna_wifi_data = {
+struct mmc_platform_data tuna_wifi_data = {
 	.ocr_mask		= MMC_VDD_165_195 | MMC_VDD_20_21,
 	.built_in		= 1,
 	.status			= tuna_wifi_status,
@@ -362,7 +362,7 @@ static cntry_locales_custom_t tuna_wifi_translate_custom_table[] = {
 	{"BR", "KR", 25}
 };
 
-static void *tuna_wifi_get_country_code(char *ccode)
+static void *tuna_wifi_get_country_code(char *ccode, u32 flags)
 {
 	int size = ARRAY_SIZE(tuna_wifi_translate_custom_table);
 	int i;
