@@ -250,6 +250,17 @@ void omap_serial_relax(int port_index)
 	_omap_serial_relax(up);
 }
 
+void omap_serial_wakeup_event(int port_index)
+{
+	struct uart_omap_port *up;
+
+	if (port_index >= OMAP_MAX_HSUART_PORTS)
+		return;
+
+	up = ui[port_index];
+	_omap_serial_wakeup_event(up);
+}
+
 static inline unsigned int serial_in(struct uart_omap_port *up, int offset)
 {
 	offset <<= up->port.regshift;
@@ -1633,6 +1644,8 @@ static int serial_omap_probe(struct platform_device *pdev)
 	pm_runtime_irq_safe(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
+	return -ENODEV; /* testing */
+
 	if (omap_up_info->wakeup_capable)
 		device_init_wakeup(&pdev->dev, true);
 	else
@@ -1817,8 +1830,10 @@ static const struct dev_pm_ops serial_omap_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(serial_omap_suspend, serial_omap_resume)
 	SET_RUNTIME_PM_OPS(serial_omap_runtime_suspend,
 				serial_omap_runtime_resume, NULL)
+#ifdef CONFIG_PM_SLEEP
 	.prepare        = serial_omap_prepare,
 	.complete       = serial_omap_complete,
+#endif
 };
 
 #if defined(CONFIG_OF)

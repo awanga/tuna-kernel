@@ -24,8 +24,6 @@
 #define SUPPORT_SYSRQ
 #endif
 
-#define OF_ENABLE
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/console.h>
@@ -42,6 +40,9 @@
 #include <linux/irq.h>
 #include <linux/pm_runtime.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/gpio.h>
+#include <linux/pinctrl/consumer.h>
 
 #include <linux/omap-dma.h>
 #include <linux/platform_data/serial-omap.h>
@@ -167,6 +168,10 @@ struct uart_omap_port {
 	/* RTS control via driver */
 	unsigned		rts_mux_driver_control:1;
 	unsigned		rts_pullup_in_suspend:1;
+
+	struct pinctrl		*pins;
+	struct pinctrl_state	*pin_default;
+	struct pinctrl_state	*pin_idle;
 
 	unsigned int		errata;
         int (*get_context_loss_count)(struct device *);
@@ -1661,6 +1666,60 @@ static void uart_tx_dma_callback(int lch, u16 ch_status, void *data)
 	return;
 }
 
+static struct omap_uart_port_info *of_get_uart_port_info(struct device *dev)
+{
+	struct omap_uart_port_info *oi;
+	struct device_node *np = dev->of_node;
+
+	oi = devm_kzalloc(dev, sizeof(*oi), GFP_KERNEL);
+	if (!oi)
+		return NULL; /* out of memory */
+
+	of_property_read_u32(np, "clock-frequency", &oi->uartclk);
+	of_property_read_u32(np, "flags", &oi->flags);
+	oi->wakeup_capable = of_property_read_bool(np, "wakeup-capable");
+	of_property_read_u32(np, "autosuspend-delay", &oi->autosuspend_timeout);
+	of_property_read_u32(np, "timed-wakelock", &oi->wakelock_timeout);
+	oi->open_close_pm = of_property_read_bool(np, "open_close_pm");
+	if (of_property_read_u32(np, "rx_trig", &oi->rx_trig))
+		oi->rx_trig = 1;
+
+	return oi;
+}
+
+static void uart_pinctrl_state_init(struct device *dev, struct uart_omap_port *up)
+{
+	struct device_node *np = dev->of_node;
+	enum of_gpio_flags flags;
+	int gpio;
+
+	up->pin_default = pinctrl_lookup_state(up->pins, PINCTRL_STATE_DEFAULT);
+	if (IS_ERR(up->pin_default)) {
+		dev_dbg(dev, "did not get default state for uart%i error: %li\n",
+			up->port.line, PTR_ERR(up->pin_default));
+		up->pin_default = NULL;
+		return;
+	}
+
+	up->pin_idle = pinctrl_lookup_state(up->pins, PINCTRL_STATE_IDLE);
+	if (IS_ERR(up->pin_idle)) {
+		dev_dbg(dev, "did not get idle state for uart%i error: %li\n",
+			up->port.line, PTR_ERR(up->pin_idle));
+		up->pin_idle = NULL;
+		return;
+	}
+
+	if (np) {
+		gpio = of_get_gpio_flags(np, 0, &flags);
+		if (gpio > 0) {
+			if (!gpio_request(gpio, "rts")) {
+				dev_info(dev, "got rts gpio %d\n", gpio);
+				gpio_direction_output(gpio, 1);
+			}
+		}
+	}
+}
+
 static int serial_omap_probe(struct platform_device *pdev)
 {
 	struct uart_omap_port	*up = NULL;
@@ -1668,6 +1727,9 @@ static int serial_omap_probe(struct platform_device *pdev)
 	struct omap_uart_port_info *omap_up_info = pdev->dev.platform_data;
 	struct omap_device *od;
 	int ret = -ENOSPC;
+
+	if (pdev->dev.of_node)
+		omap_up_info = of_get_uart_port_info(&pdev->dev);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -1681,16 +1743,11 @@ static int serial_omap_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	if (!request_mem_region(mem->start, (mem->end - mem->start) + 1,
+	if (!devm_request_mem_region(&pdev->dev, mem->start, resource_size(mem),
 				     pdev->dev.driver->name)) {
 		dev_err(&pdev->dev, "memory region already claimed\n");
 		return -EBUSY;
 	}
-
-#ifdef OF_ENABLE
-	if (pdev->dev.of_node)
-		return -ENODEV;
-#endif
 
 	dma_rx = platform_get_resource_byname(pdev, IORESOURCE_DMA, "rx");
 	if (!dma_rx) {
@@ -1719,11 +1776,35 @@ static int serial_omap_probe(struct platform_device *pdev)
 	up->port.regshift = 2;
 	up->port.fifosize = 64;
 	up->port.ops = &serial_omap_pops;
-	up->port.line = pdev->id;
+
+	if (pdev->dev.of_node) {
+		up->port.line = of_alias_get_id(pdev->dev.of_node, "serial");
+		pdev->dev.power.resume_noidle =
+			of_property_read_bool(pdev->dev.of_node,
+			"resume-noidle");
+		dev_info(&pdev->dev, "resume-noidle = %d\n",
+			pdev->dev.power.resume_noidle);
+	} else
+		up->port.line = pdev->id;
+
+	if (up->port.line < 0) {
+		dev_err(&pdev->dev, "failed to get alias/pdev id, errno %d\n",
+								up->port.line);
+		ret = -ENODEV;
+		goto do_free;
+	}
+
+	up->pins = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(up->pins)) {
+		dev_warn(&pdev->dev, "did not get pins for uart%i error: %li\n",
+			up->port.line, PTR_ERR(up->pins));
+		up->pins = NULL;
+	} else
+		uart_pinctrl_state_init(&pdev->dev, up);
 
 	up->port.mapbase = mem->start;
-	up->port.membase = ioremap(mem->start, mem->end - mem->start);
-
+	up->port.membase = devm_ioremap(&pdev->dev, mem->start,
+						resource_size(mem));
 	if (!up->port.membase) {
 		dev_err(&pdev->dev, "can't ioremap UART\n");
 		ret = -ENOMEM;
@@ -1939,7 +2020,7 @@ static const struct dev_pm_ops omap_serial_dev_pm_ops = {
 	.runtime_resume = omap_serial_runtime_resume,
 };
 
-#if defined(CONFIG_OF) && defined(OF_ENABLE)
+#ifdef CONFIG_OF
 static const struct of_device_id omap_serial_of_match[] = {
 	{ .compatible = "ti,omap2-uart" },
 	{ .compatible = "ti,omap3-uart" },
@@ -1955,9 +2036,7 @@ static struct platform_driver serial_omap_driver = {
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.pm = &omap_serial_dev_pm_ops,
-#ifdef OF_ENABLE
 		.of_match_table = of_match_ptr(omap_serial_of_match),
-#endif
 	},
 };
 

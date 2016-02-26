@@ -84,9 +84,10 @@ void prcm_handle_pad_wkup(void)
 				generic_handle_irq(wkup->irq);
 		}
 	}
+#ifdef CONFIG_SUSPEND
 	if (wkup_irq >= 0)
 		log_wakeup_reason(wkup_irq);
-
+#endif
 }
 
 #ifdef CONFIG_OMAP3_PAD_WKUP_IO

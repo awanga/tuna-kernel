@@ -87,9 +87,6 @@ extern void omap_serial_init(void);
 extern void omap_serial_board_init(struct omap_uart_port_info *platform_data);
 extern void omap_serial_init_port(struct omap_board_data *bdata,
 		struct omap_uart_port_info *platform_data);
-extern int omap_serial_wake(int port_num);
-extern int omap_serial_enable(int port_num);
-extern int omap_serial_disable(int port_num);
 
 extern void omap_rts_mux_write(u16 val, int num);
 #endif
