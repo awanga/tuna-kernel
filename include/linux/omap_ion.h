@@ -49,6 +49,7 @@ int omap_tiler_pages(struct ion_client *client, struct ion_handle *handle,
 /* additional heaps used only on omap */
 enum {
 	OMAP_ION_HEAP_TYPE_TILER = ION_HEAP_TYPE_CUSTOM + 1,
+	OMAP_ION_HEAP_TYPE_TILER_RESERVATION,
 };
 #define OMAP_ION_HEAP_TILER_MASK (1 << OMAP_ION_HEAP_TYPE_TILER)
 enum {

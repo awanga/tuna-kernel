@@ -29,6 +29,8 @@ EXPORT_SYMBOL(omap_ion_device);
 
 static int num_heaps;
 static struct ion_heap **heaps;
+
+#ifdef CONFIG_TI_TILER
 static struct ion_heap *tiler_heap;
 static struct ion_heap *nonsecure_tiler_heap;
 
@@ -47,11 +49,13 @@ int omap_ion_nonsecure_tiler_alloc(struct ion_client *client,
 	return omap_tiler_alloc(nonsecure_tiler_heap, client, data);
 }
 EXPORT_SYMBOL(omap_ion_nonsecure_tiler_alloc);
+#endif
 
 static long omap_ion_ioctl(struct ion_client *client, unsigned int cmd,
 		    unsigned long arg)
 {
 	switch (cmd) {
+#ifdef CONFIG_TI_TILER
 	case OMAP_ION_TILER_ALLOC:
 	{
 		struct omap_ion_tiler_alloc_data data;
@@ -72,6 +76,7 @@ static long omap_ion_ioctl(struct ion_client *client, unsigned int cmd,
 			return -EFAULT;
 		break;
 	}
+#endif
 	default:
 		pr_err("%s: Unknown custom ioctl\n", __func__);
 		return -ENOTTY;
@@ -99,6 +104,7 @@ static int omap_ion_probe(struct platform_device *pdev)
 	for (i = 0; i < num_heaps; i++) {
 		struct ion_platform_heap *heap_data = &pdata->heaps[i];
 
+#ifdef CONFIG_TI_TILER
 		if (heap_data->type == OMAP_ION_HEAP_TYPE_TILER) {
 			heaps[i] = omap_tiler_heap_create(heap_data);
 			if (heap_data->id == OMAP_ION_HEAP_NONSECURE_TILER)
@@ -108,7 +114,9 @@ static int omap_ion_probe(struct platform_device *pdev)
 		} else if (heap_data->type ==
 				OMAP_ION_HEAP_TYPE_TILER_RESERVATION) {
 			heaps[i] = omap_tiler_heap_create(heap_data);
-		} else {
+		} else
+#endif
+		{
 			heaps[i] = ion_heap_create(heap_data);
 		}
 		if (IS_ERR_OR_NULL(heaps[i])) {
@@ -127,9 +135,11 @@ static int omap_ion_probe(struct platform_device *pdev)
 err:
 	for (i = 0; i < num_heaps; i++) {
 		if (heaps[i]) {
+#ifdef CONFIG_TI_TILER
 			if (heaps[i]->type == OMAP_ION_HEAP_TYPE_TILER)
 				omap_tiler_heap_destroy(heaps[i]);
 			else
+#endif
 				ion_heap_destroy(heaps[i]);
 		}
 	}
@@ -144,9 +154,11 @@ static int omap_ion_remove(struct platform_device *pdev)
 
 	ion_device_destroy(idev);
 	for (i = 0; i < num_heaps; i++)
+#ifdef CONFIG_TI_TILER
 		if (heaps[i]->type == OMAP_ION_HEAP_TYPE_TILER)
 			omap_tiler_heap_destroy(heaps[i]);
 		else
+#endif
 			ion_heap_destroy(heaps[i]);
 	kfree(heaps);
 	return 0;
@@ -189,7 +201,7 @@ int omap_ion_share_fd_to_buffers(int fd, struct ion_buffer **buffers,
 
 	for (i = 0; i < *num_handles; i++) {
 		if (handles[i])
-			buffers[i] = ion_share(client, handles[i]);
+			buffers[i] = ion_handle_buffer(handles[i]);
 	}
 
 exit:
