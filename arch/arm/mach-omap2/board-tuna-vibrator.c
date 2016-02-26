@@ -18,6 +18,7 @@
 #include <linux/gpio.h>
 #include <linux/wakelock.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <asm/mach-types.h>
 #include <plat/dmtimer.h>
 
@@ -133,7 +134,12 @@ static int __init vibrator_init(void)
 	hrtimer_init(&vibdata.timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	vibdata.timer.function = vibrator_timer_func;
 
-	vibdata.gptimer = omap_dm_timer_request_specific(VIB_GPTIMER_NUM);
+	if (of_have_populated_dt())
+		vibdata.gptimer = omap_dm_timer_request_by_node(
+			of_find_node_by_path("/ocp/timer@48086000"));
+	else
+		vibdata.gptimer = omap_dm_timer_request_specific(VIB_GPTIMER_NUM);
+
 	if (vibdata.gptimer == NULL)
 		return -1;
 
