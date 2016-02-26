@@ -77,7 +77,6 @@
 	pinctrl-0 = <
 			&twl6030_pins
 			&twl6040_pins
-			&uart3_pins
 			&mcpdm_pins
 			&dmic_pins
 			&mcbsp1_pins
@@ -311,20 +310,10 @@
 };
 
 &vana {
-	/*regulator-min-microvolt = <2100000>;
-	regulator-max-microvolt = <2100000>;*/
 	regulator-always-on;
 };
 
-/*&vcxio {
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-};*/
-
 &vusb {
-	/*regulator-min-microvolt = <3300000>;
-	regulator-max-microvolt = <3300000>;*/
-
 	regulator-state-mem {
 		regulator-off-in-suspend;
 	};
