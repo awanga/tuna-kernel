@@ -599,7 +599,7 @@ static struct i2c_board_info __initdata tuna_i2c4_boardinfo[] = {
 	},
 };
 
-/*static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
+static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
 	.sda_pin = GPIO_MHL_SDA_18V,
 	.scl_pin = GPIO_MHL_SCL_18V,
 	.udelay = 3,
@@ -612,36 +612,11 @@ static struct platform_device tuna_gpio_i2c5_device = {
 	.dev = {
 		.platform_data = &tuna_gpio_i2c5_pdata,
 	}
-};*/
+};
 
 static int __init tuna_i2c_init(void)
 {
 	u32 r;
-
-	/*
-	 * This will allow unused regulator to be shutdown. This flag
-	 * should be set in the board file. Before regulators are registered.
-	 */
-	/*regulator_has_full_constraints();*/
-
-	/*omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
-		TWL_COMMON_REGULATOR_VDAC |
-		TWL_COMMON_REGULATOR_VAUX2 |
-		TWL_COMMON_REGULATOR_VAUX3 |
-		TWL_COMMON_REGULATOR_VMMC |
-		TWL_COMMON_REGULATOR_VPP |
-		TWL_COMMON_REGULATOR_VANA |
-		TWL_COMMON_REGULATOR_VCXIO |
-		TWL_COMMON_REGULATOR_VUSB |
-		TWL_COMMON_REGULATOR_CLK32KG |
-		TWL_COMMON_REGULATOR_V2V1);
-
-	omap4_pmic_init("twl6030", &tuna_twldata, NULL, 0);
-
-	omap_register_i2c_bus(2, 400, tuna_i2c2_boardinfo,
-				ARRAY_SIZE(tuna_i2c2_boardinfo));
-	omap_register_i2c_bus(3, 400, NULL, 0);*/
-
 
 	/* Disable internal pullup on i2c.4 line:
 	 * as external 2.2K is already present
@@ -650,8 +625,34 @@ static int __init tuna_i2c_init(void)
 	r |= (1 << OMAP4_I2C4_SDA_PULLUPRESX_SHIFT);
 	omap4_ctrl_pad_writel(r, OMAP4_CTRL_MODULE_PAD_CORE_CONTROL_I2C_0);
 
-	/*omap_register_i2c_bus(4, 400, tuna_i2c4_boardinfo,
-				ARRAY_SIZE(tuna_i2c4_boardinfo));*/
+	if (!of_have_populated_dt()) {
+		/*
+		 * This will allow unused regulator to be shutdown. This flag
+		 * should be set in the board file. Before regulators are registered.
+		 */
+		regulator_has_full_constraints();
+
+		omap4_pmic_get_config(&tuna_twldata, TWL_COMMON_PDATA_USB,
+			TWL_COMMON_REGULATOR_VDAC |
+			TWL_COMMON_REGULATOR_VAUX2 |
+			TWL_COMMON_REGULATOR_VAUX3 |
+			TWL_COMMON_REGULATOR_VMMC |
+			TWL_COMMON_REGULATOR_VPP |
+			TWL_COMMON_REGULATOR_VANA |
+			TWL_COMMON_REGULATOR_VCXIO |
+			TWL_COMMON_REGULATOR_VUSB |
+			TWL_COMMON_REGULATOR_CLK32KG |
+			TWL_COMMON_REGULATOR_V2V1);
+
+		omap4_pmic_init("twl6030", &tuna_twldata, NULL, 0);
+
+		omap_register_i2c_bus(2, 400, tuna_i2c2_boardinfo,
+				ARRAY_SIZE(tuna_i2c2_boardinfo));
+		omap_register_i2c_bus(3, 400, NULL, 0);
+
+		omap_register_i2c_bus(4, 400, tuna_i2c4_boardinfo,
+				ARRAY_SIZE(tuna_i2c4_boardinfo));
+	}
 
 	/*
 	 * Drive MSECURE high for TWL6030 write access.
@@ -1465,11 +1466,14 @@ static void __init tuna_init(void)
 	//ramconsole_pdata.bootinfo = omap4_get_resetreason();
 
 	platform_add_devices(tuna_devices, ARRAY_SIZE(tuna_devices));
-	board_serial_init();
-	omap_sdrc_init(NULL, NULL);
-	omap4_twl6030_hsmmc_init(mmc);
-	usb_bind_phy("musb-hdrc.2.auto", 0, "omap-usb2.3.auto");
-	usb_musb_init(&musb_board_data);
+	if (!of_have_populated_dt()) {
+		board_serial_init();
+		omap_sdrc_init(NULL, NULL);
+		omap4_twl6030_hsmmc_init(mmc);
+		usb_bind_phy("musb-hdrc.2.auto", 0, "omap-usb2.3.auto");
+		usb_musb_init(&musb_board_data);
+	}
+
 	omap4_tuna_create_board_props();
 	if (TUNA_TYPE_TORO == omap4_tuna_get_type()) {
 		spi_register_board_info(tuna_lte_modem,

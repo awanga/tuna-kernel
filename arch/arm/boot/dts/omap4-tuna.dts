@@ -342,6 +342,7 @@
 &mmc1 {
 	vmmc-supply = <&vmmc>;
 	bus-width = <8>;
+	ti,non-removable;
 };
 
 &mmc2 {
@@ -357,8 +358,8 @@
 };
 
 &mmc5 {
+	vmmc-supply = <&vmmc>;
 	bus-width = <4>;
-	ti,non-removable;
 };
 
 &emif1 {
