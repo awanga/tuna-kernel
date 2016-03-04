@@ -107,14 +107,17 @@ void omap_uart_remove_wakeup(struct device *dev)
 	omap_hwmod_disable_wakeup(oh);
 	if (oh->class->sysc)
 		oh->class->sysc->sysc_flags &= ~SYSC_HAS_ENAWAKEUP;
-	offs = (oh->prcm.omap2.prcm_reg_id == 3) ?
+
+	if (cpu_is_omap34xx()) {
+		offs = (oh->prcm.omap2.prcm_reg_id == 3) ?
 					OMAP3430ES2_PM_WKEN3 : PM_WKEN1;
-	omap2_prm_clear_mod_reg_bits((1<<oh->prcm.omap2.module_bit),
+		omap2_prm_clear_mod_reg_bits((1<<oh->prcm.omap2.module_bit),
 				     oh->prcm.omap2.module_offs, offs);
-	offs = (oh->prcm.omap2.prcm_reg_id == 3) ?
+		offs = (oh->prcm.omap2.prcm_reg_id == 3) ?
 					OMAP3430ES2_PM_WKST3 : PM_WKST1;
-	omap2_prm_set_mod_reg_bits((1<<oh->prcm.omap2.module_bit),
+		omap2_prm_set_mod_reg_bits((1<<oh->prcm.omap2.module_bit),
 				   oh->prcm.omap2.module_offs, offs);
+	}
 
 	spin_unlock_irqrestore(&oh->_lock, flags);
 }
