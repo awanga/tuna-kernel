@@ -1405,6 +1405,10 @@ static void _enable_sysc(struct omap_hwmod *oh)
 	    (sf & SYSC_HAS_CLOCKACTIVITY))
 		_set_clockactivity(oh, oh->class->sysc->clockact, &v);
 
+	/* If slave is in SMARTIDLE, also enable wakeup */
+	if ((sf & SYSC_HAS_SIDLEMODE) && !(oh->flags & HWMOD_SWSUP_SIDLE))
+		_enable_wakeup(oh, &v);
+
 	_write_sysconfig(v, oh);
 
 	/*
@@ -1468,8 +1472,13 @@ static void _idle_sysc(struct omap_hwmod *oh)
 		_set_master_standbymode(oh, idlemode, &v);
 	}
 
+	/* If slave is in SMARTIDLE, also enable wakeup */
+	if ((sf & SYSC_HAS_SIDLEMODE) && !(oh->flags & HWMOD_SWSUP_SIDLE))
+		_enable_wakeup(oh, &v);
+
 	_write_sysconfig(v, oh);
 }
+
 
 /**
  * _shutdown_sysc - force a module into idle via OCP_SYSCONFIG
