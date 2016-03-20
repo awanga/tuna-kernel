@@ -281,11 +281,6 @@
 			ti,hwmods = "i2c4";
 		};
 
-		i2c5: i2c-gpio@0 {
-			compatible = "i2c-gpio";
-			status = "disabled";
-		};
-
 		mcspi1: spi@48098000 {
 			compatible = "ti,omap4-mcspi";
 			reg = <0x48098000 0x200>;

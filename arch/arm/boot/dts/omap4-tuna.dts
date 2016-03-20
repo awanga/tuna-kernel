@@ -14,13 +14,36 @@
 	model = "Galaxy Nexus";
 	compatible = "ti,tuna", "ti,omap4430", "ti,omap4";
 
+        aliases {
+                i2c1 = &i2c1;
+                i2c2 = &i2c2;
+                i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &i2c5;
+        };
+
 	memory {
 		device_type = "memory";
 		reg = <0x80000000 0x40000000>; /* 1 GB */
 	};
 
         chosen {
-                bootargs = "console=ttyO2 androidboot.console=ttyO2 androidboot.hardware=tuna mem=1G vmalloc=768M omap_wdt.timer_margin=30 no_console_suspend earlyprintk debug initcall_debug";
+                bootargs = "console=ttyO2 androidboot.console=ttyO2 androidboot.hardware=tuna mem=1G vmalloc=768M omap_wdt.timer_margin=30";
+	};
+
+	ocp {
+		i2c5: i2c-gpio@0 {
+			compatible = "i2c-gpio";
+			status = "ok";
+			gpios = <&gpio4 2 0 /* sda - gpio line 98 */
+				 &gpio4 3 0 /* scl - gpio line 99 */
+				>;
+			i2c-gpio,sda-open-drain;
+			i2c-gpio,scl-open-drain;
+			udelay = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
 	};
 
 	sound {
@@ -164,15 +187,26 @@
 
 	i2c4_pins: pinmux_i2c4_pins {
 		pinctrl-single,pins = <
-			0xee 0x118        /* i2c4_scl PULLUP | INPUTENABLE | MODE0 */
-			0xf0 0x118     /* i2c4_sda PULLUP | INPUTENABLE | MODE0 */
+			0xee 0x118	/* i2c4_scl PULLUP | INPUTENABLE | MODE0 */
+			0xf0 0x118	/* i2c4_sda PULLUP | INPUTENABLE | MODE0 */
 		>;
 	};
 
 	uart3_pins: pinmux_uart3_pins {
 		pinctrl-single,pins = <
-			0x106 0x110    /* uart3_rx INPUTENABLE | MODE0 */
-			0x108 0x0      /* uart3_tx OUTPUT | MODE0 */
+			0x106 0x110	/* uart3_rx INPUTENABLE | MODE0 */
+			0x108 0x0	/* uart3_tx OUTPUT | MODE0 */
+		>;
+	};
+
+	mmc1_pins: pinmux_mmc1_pins {
+		pinctrl-single,pins = <
+			0xa4 0x118	/* sdmmc1_clk  PULLUP | INPUTENABLE | MODE0 */
+			0xa6 0x118	/* sdmmc1_cmd  PULLUP | INPUTENABLE | MODE0 */
+			0xa8 0x118	/* sdmmc1_dat0 PULLUP | INPUTENABLE | MODE0 */
+			0xaa 0x118	/* sdmmc1_dat1 PULLUP | INPUTENABLE | MODE0 */
+			0xac 0x118	/* sdmmc1_dat2 PULLUP | INPUTENABLE | MODE0 */
+			0xae 0x118	/* sdmmc1_dat3 PULLUP | INPUTENABLE | MODE0 */
 		>;
 	};
 };
@@ -240,6 +274,7 @@
 	
 	ducati@20 {
 		compatible = "ti,ducati";
+		reg = <0x20>;
 		ext-master = <1>;
 	};	
 };
@@ -249,6 +284,23 @@
 	pinctrl-0 = <&i2c3_pins>;
 
 	clock-frequency = <100000>;
+
+	mms144@48 {
+		compatible = "melfas,mms144";
+		reg = <0x48>;
+
+		/* SPI = 0, IRQ# = 46, 4 = active low level-sensitive */
+		interrupts = <0 46 4>;
+		interrupt-parent = <&gic>;
+
+		gpio-enable = <&gpio1 19 0>;  /* GPIO_TOUCH_EN = 19 */
+		gpio-reset = <&gpio2 14 0>;  /* GPIO_TOUCH_IRQ = 46 */
+		gpio-scl = <&gpio5 2 0>; /* GPIO_TOUCH_SCL = 130 */
+		gpio-sda = <&gpio5 3 0>; /* GPIO_TOUCH_SDA = 131 */
+
+		x-size = <720>;
+		y-size = <1080>;
+	};
 };
 
 &i2c4 {
@@ -256,22 +308,12 @@
 	pinctrl-0 = <&i2c4_pins>;
 
 	clock-frequency = <400000>;
-	
+
 	an30259a@30 {
 		compatible = "led,an30259a";
-	};	
-};
+		reg = <0x30>;
+	};
 
-&i2c5 {
-	status = "ok";
-	gpios = <&gpio4 2 0 /* sda - gpio line 98 */
-		 &gpio4 3 0 /* scl - gpio line 99 */
-		>;
-	i2c-gpio,sda-open-drain;
-	i2c-gpio,scl-open-drain;
-	udelay = <3>;
-	#address-cells = <1>;
-	#size-cells = <0>;
 };
 
 
@@ -340,6 +382,10 @@
 };
 
 &mmc1 {
+	status = "ok";
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pins>;
+
 	vmmc-supply = <&vmmc>;
 	bus-width = <8>;
 	ti,non-removable;
@@ -358,6 +404,7 @@
 };
 
 &mmc5 {
+	status = "ok";
 	vmmc-supply = <&vmmc>;
 	bus-width = <4>;
 };

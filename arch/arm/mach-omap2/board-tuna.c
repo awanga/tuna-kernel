@@ -599,6 +599,7 @@ static struct i2c_board_info __initdata tuna_i2c4_boardinfo[] = {
 	},
 };
 
+#ifndef CONFIG_OF
 static struct i2c_gpio_platform_data tuna_gpio_i2c5_pdata = {
 	.sda_pin = GPIO_MHL_SDA_18V,
 	.scl_pin = GPIO_MHL_SCL_18V,
@@ -613,6 +614,7 @@ static struct platform_device tuna_gpio_i2c5_device = {
 		.platform_data = &tuna_gpio_i2c5_pdata,
 	}
 };
+#endif
 
 static int __init tuna_i2c_init(void)
 {
@@ -1306,7 +1308,9 @@ static struct platform_device *tuna_devices[] __initdata = {
 	&tuna_abe_audio,
 	&tuna_hdmi_audio_codec,
 	&btwilink_device,
-	/*&tuna_gpio_i2c5_device,*/
+#ifndef CONFIG_OF
+	&tuna_gpio_i2c5_device,
+#endif
 	&tuna_spdif_dit_device,
 };
 
