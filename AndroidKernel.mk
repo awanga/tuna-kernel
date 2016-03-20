@@ -1,7 +1,7 @@
 #Android makefile to build kernel as a part of Android Build
 ifneq ($(BUILD_KERNEL),)
 
-KERNEL_SRCDIR := kernel/omap-moto-cw
+KERNEL_SRCDIR := $(KERNEL_DIR)
 KERNEL_OUT := $(ANDROID_PRODUCT_OUT)/obj/KERNEL_OBJ
 KERNEL_CONFIG := $(KERNEL_OUT)/.config
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/arm/boot/zImage-dtb
