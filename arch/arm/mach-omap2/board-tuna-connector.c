@@ -250,7 +250,7 @@ static void tuna_vusb_enable(struct tuna_otg *tuna_otg, bool enable)
 {
 	/* delay getting the regulator until later */
 	if (IS_ERR_OR_NULL(tuna_otg->vusb)) {
-		tuna_otg->vusb = regulator_get(&tuna_otg->dev, "vusb");
+		tuna_otg->vusb = regulator_get(0, "VUSB");
 		if (IS_ERR(tuna_otg->vusb)) {
 			dev_err(&tuna_otg->dev, "cannot get vusb regulator\n");
 			return;
@@ -292,7 +292,7 @@ static void tuna_set_vbus_drive(bool enable)
 static void tuna_ap_usb_attach(struct tuna_otg *tuna_otg)
 {
 	struct usb_phy *phy;
-	
+
 	tuna_vusb_enable(tuna_otg, true);
 
 	if (omap4_tuna_get_revision() >= 3) {
@@ -317,7 +317,7 @@ static void tuna_ap_usb_attach(struct tuna_otg *tuna_otg)
 static void tuna_ap_usb_detach(struct tuna_otg *tuna_otg)
 {
 	struct usb_phy *phy;
-	
+
 	tuna_vusb_enable(tuna_otg, false);
 
 	phy = usb_get_phy(USB_PHY_TYPE_USB2);
@@ -446,11 +446,11 @@ static void tuna_fsa_usb_cb(u8 attached)
 				tuna_cp_usb_attach(tuna_otg);
 			else
 				tuna_ap_usb_attach(tuna_otg);
-			
+
 			tuna_otg->current_device = FSA9480_DETECT_USB;
 		} else { /* USBHOST */
 			struct usb_phy *phy;
-			
+
 			tuna_vusb_enable(tuna_otg, true);
 
 			if (omap4_tuna_get_revision() >= 3) {
@@ -469,7 +469,7 @@ static void tuna_fsa_usb_cb(u8 attached)
 						   USB_EVENT_ID,
 						   phy->otg->gadget);
 			}
-			
+
 			tuna_otg->current_device = FSA9480_DETECT_USB_HOST;
 		}
 	} else {
@@ -509,7 +509,7 @@ static void tuna_fsa_charger_cb(u8 attached)
 
 	if (attached == FSA9480_ATTACHED) {
 		struct usb_phy *phy;
-		
+
 		tuna_mux_usb_to_fsa(true);
 
 		phy = usb_get_phy(USB_PHY_TYPE_USB2);
@@ -520,7 +520,7 @@ static void tuna_fsa_charger_cb(u8 attached)
 			atomic_notifier_call_chain(&phy->notifier,
 					   USB_EVENT_CHARGER,
 					   phy->otg->gadget);
-		}		
+		}
 		tuna_otg->current_device = FSA9480_DETECT_CHARGER;
 	} else {
 		tuna_ap_usb_detach(tuna_otg);
