@@ -219,7 +219,13 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 	adap->dev.of_node = pdev->dev.of_node;
 
-	adap->nr = pdev->id;
+	if (adap->dev.of_node) {
+		int ret = of_alias_get_id(adap->dev.of_node, "i2c");
+		if (ret < 0)
+			ret = pdev->id;
+		adap->nr = ret;
+	} else
+		adap->nr = pdev->id;
 	ret = i2c_bit_add_numbered_bus(adap);
 	if (ret)
 		goto err_add_bus;

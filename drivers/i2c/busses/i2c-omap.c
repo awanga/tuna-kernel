@@ -1338,7 +1338,13 @@ omap_i2c_probe(struct platform_device *pdev)
 	adap->dev.of_node = pdev->dev.of_node;
 
 	/* i2c device drivers may be active on return from add_adapter() */
-	adap->nr = pdev->id;
+	if (adap->dev.of_node) {
+		int ret = of_alias_get_id(adap->dev.of_node, "i2c");
+		if (ret < 0)
+			ret = pdev->id;
+		adap->nr = ret;
+	} else
+		adap->nr = pdev->id;
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(dev->dev, "failure adding adapter\n");
