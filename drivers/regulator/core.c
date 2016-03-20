@@ -4010,9 +4010,6 @@ static int __init regulator_init_complete(void)
 		if (!enabled)
 			goto unlock;
 
-#ifdef CONFIG_MACH_TUNA
-#warning "HACK: disabling full constraint code for regulators!! FIX ME!"
-#else
 		if (has_full_constraints) {
 			/* We log since this may kill the system if it
 			 * goes wrong. */
@@ -4029,7 +4026,6 @@ static int __init regulator_init_complete(void)
 			 */
 			rdev_warn(rdev, "incomplete constraints, leaving on\n");
 		}
-#endif
 unlock:
 		mutex_unlock(&rdev->mutex);
 	}
