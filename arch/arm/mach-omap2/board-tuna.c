@@ -217,7 +217,7 @@ static struct platform_device btwilink_device = {
 
 static struct omap_musb_board_data musb_board_data = {
         .interface_type         = MUSB_INTERFACE_UTMI,
-#ifdef CONFIG_USB_MUSB_OTG
+#ifdef CONFIG_USB_OTG
         .mode                   = MUSB_OTG,
 #else
         .mode                   = MUSB_PERIPHERAL,
@@ -237,6 +237,7 @@ static struct omap2_hsmmc_info mmc[] = {
 		.ocr_mask	= MMC_VDD_165_195,
 		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
+		.nonremovable	= true,
 	},
 	{
 		.name		= "wl1271",
@@ -245,14 +246,14 @@ static struct omap2_hsmmc_info mmc[] = {
 		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
 		.ocr_mask	= MMC_VDD_165_195 | MMC_VDD_20_21,
-		.nonremovable	= true,
+		.nonremovable	= false,
 	},
 	{}	/* Terminator */
 };
 
 static struct regulator_consumer_supply tuna_vmmc_supply[] = {
 	REGULATOR_SUPPLY("vmmc", "omap_hsmmc.0"),
-	/*REGULATOR_SUPPLY("vmmc", "omap_hsmmc.1"),*/
+	REGULATOR_SUPPLY("vmmc", "omap_hsmmc.1"),
 };
 
 
@@ -1424,7 +1425,7 @@ int tuna_debug_halt(void)
 	//while (1) { asm volatile ("wfe"); cpu_relax(); }
 	return 0;
 }
-/*fs_initcall_sync(tuna_debug_halt);*/
+/*late_initcall_sync(tuna_debug_halt);*/
 
 static void __init tuna_init(void)
 {
@@ -1474,7 +1475,6 @@ static void __init tuna_init(void)
 		board_serial_init();
 		omap_sdrc_init(NULL, NULL);
 		omap4_twl6030_hsmmc_init(mmc);
-		usb_bind_phy("musb-hdrc.2.auto", 0, "omap-usb2.3.auto");
 		usb_musb_init(&musb_board_data);
 	}
 

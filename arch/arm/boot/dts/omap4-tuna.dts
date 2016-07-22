@@ -80,6 +80,7 @@
 			"DMic", "Digital Mic",
 			"Digital Mic", "Digital Mic1 Bias";
 	};
+
 };
 
 &omap4_pmx_wkup {
@@ -201,7 +202,7 @@
 
 	mmc1_pins: pinmux_mmc1_pins {
 		pinctrl-single,pins = <
-			0xa4 0x118	/* sdmmc1_clk  PULLUP | INPUTENABLE | MODE0 */
+			0xa4 0x0	/* sdmmc1_clk  OUTPUT | MODE0 */
 			0xa6 0x118	/* sdmmc1_cmd  PULLUP | INPUTENABLE | MODE0 */
 			0xa8 0x118	/* sdmmc1_dat0 PULLUP | INPUTENABLE | MODE0 */
 			0xaa 0x118	/* sdmmc1_dat1 PULLUP | INPUTENABLE | MODE0 */
@@ -388,6 +389,7 @@
 
 	vmmc-supply = <&vmmc>;
 	bus-width = <8>;
+	cap-mmc-highspeed;
 	ti,non-removable;
 };
 
@@ -404,9 +406,14 @@
 };
 
 &mmc5 {
-	status = "ok";
-	vmmc-supply = <&vmmc>;
+	vmmc-supply = <&vmmc_dummy>;
 	bus-width = <4>;
+
+        vmmc_dummy: regulator-vmmc-dummy {
+                compatible = "regulator-dummy";
+                regulator-min-microvolt = <1650000>;
+                regulator-max-microvolt = <2100000>;
+        };
 };
 
 &emif1 {
@@ -424,6 +431,10 @@
 };
 
 &mcbsp3 {
+	status = "disabled";
+};
+
+&usbhshost {
 	status = "disabled";
 };
 

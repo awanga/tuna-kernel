@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/of_platform.h>
 
 #include <linux/usb/nop-usb-xceiv.h>
 #include "usb.h"
@@ -70,7 +71,6 @@ void __init omap4_ehci_init(void)
 	/* FREF_CLK3 provides the 19.2 MHz reference clock to the PHY */
 	omap_mux_init_signal("fref_clk3_out", OMAP_PIN_OUTPUT | OMAP_MUX_MODE0);
 
-#if 0
 	phy_ref_clk = clk_get(NULL, "auxclk3_ck");
 	if (IS_ERR(phy_ref_clk)) {
 		pr_err("omap: ehci: Cannot request auxclk3");
@@ -86,7 +86,6 @@ void __init omap4_ehci_init(void)
 		pr_err("omap: ehci: Cannot clk_enable auxclk3 err %d", ret);
 		return;
 	}
-#endif
 
 	ret = clk_add_alias("main_clk", "nop_usb_xceiv.1", "auxclk3_ck", NULL);
 	if (ret)
