@@ -377,6 +377,18 @@ config TOUCHSCREEN_MMS114
 	  To compile this driver as a module, choose M here: the
 	  module will be called mms114.
 
+config TOUCHSCREEN_MMS144
+        tristate "MELFAS MMS144 touchscreen"
+        depends on I2C && GENERIC_HARDIRQS
+        help
+          Say Y here if you have a MELFAS MMS144 touchscreen controller
+          chip in your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called mms_ts.
+
 config TOUCHSCREEN_MTOUCH
 	tristate "MicroTouch serial touchscreens"
 	select SERIO
