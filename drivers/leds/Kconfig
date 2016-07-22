@@ -32,6 +32,16 @@ config LEDS_88PM860X
 	  This option enables support for on-chip LED drivers found on Marvell
 	  Semiconductor 88PM8606 PMIC.
 
+config LEDS_AN30259A
+        tristate "LED driver for Panasonic AN30259A RGB LED"
+	depends on LEDS_CLASS
+        depends on I2C
+        help
+          This option enables support for AN30259A RGB LED chips
+          accessed via the I2C bus.
+          AN30259A has three channel LED driver. By synchronous clock
+          function, combined operation is possible.
+
 config LEDS_ATMEL_PWM
 	tristate "LED Support using Atmel PWM outputs"
 	depends on LEDS_CLASS
